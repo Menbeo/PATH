@@ -1,134 +1,101 @@
-from typing import List, Tuple, Dict
-import numpy as np
+from math import radians, sin, cos, sqrt, atan2, degrees
 import heapq
-import matplotlib.pyplot as plt
 
-# --- Node Utilities ---
-def create_node(position: Tuple[int, int], g: float = float('inf'), parent: Dict = None) -> Dict:
-    return {
-        'position': position,
-        'g': g,
-        'parent': parent
-    }
+# === CONFIG ===
+ISLAND_CENTER = (10.72662, 106.71780)
+ISLAND_RADIUS = 0.2  # 200m in km
 
-# --- Neighbor Detection ---
-def get_valid_neighbors(grid: np.ndarray, position: Tuple[int, int]) -> List[Tuple[int, int]]:
-    x, y = position
-    rows, cols = grid.shape
-    possible_moves = [
-        (x+1, y), (x-1, y),
-        (x, y+1), (x, y-1)
-    ]
-    return [
-        (nx, ny) for nx, ny in possible_moves
-        if 0 <= nx < rows and 0 <= ny < cols
-        and grid[nx, ny] == 0
-    ]
+# === HELPER FUNCTIONS ===
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371
+    dlat, dlon = radians(lat2 - lat1), radians(lon2 - lon1)
+    a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
-# --- Path Reconstruction ---
-def reconstruct_path(goal_node: Dict) -> List[Tuple[int, int]]:
-    path = []
-    current = goal_node
-    while current is not None:
-        path.append(current['position'])
-        current = current['parent']
-    return path[::-1]
+def bearing(lat1, lon1, lat2, lon2):
+    dlon = radians(lon2 - lon1)
+    x = sin(dlon) * cos(radians(lat2))
+    y = cos(radians(lat1)) * sin(radians(lat2)) - sin(radians(lat1)) * cos(radians(lat2)) * cos(dlon)
+    return (degrees(atan2(x, y)) + 360) % 360
 
-# --- Dijkstra's Algorithm ---
-def find_path_dijkstra(grid: np.ndarray, start: Tuple[int, int], goal: Tuple[int, int]) -> List[Tuple[int, int]]:
-    start_node = create_node(position=start, g=0)
+def yaw_pwm(b):
+    delta = ((b + 180) % 360) - 180
+    return max(1100, min(1900, int(1500 + delta * (400 / 180))))
 
-    open_list = [(start_node['g'], start)]
-    open_dict = {start: start_node}
-    closed_set = set()
+def initialize_rc():
+    print('Start Script')
+    for ch in range(1, 9): Script.SendRC(ch, 1500, False)
+    Script.SendRC(3, int(Script.GetParam("RC3_MIN")), True)
+    Script.Sleep(5000)
+    while cs.lat == 0 or cs.lng == 0: Script.Sleep(1000)
 
-    while open_list:
-        _, current_pos = heapq.heappop(open_list)
-        current_node = open_dict[current_pos]
+def is_near_island(lat, lon):
+    return haversine(lat, lon, *ISLAND_CENTER) < ISLAND_RADIUS
 
-        if current_pos == goal:
-            return reconstruct_path(current_node)
+# === MOVE WITH FORCED AVOIDANCE ===
+def move(path):
+    for tgt in path[1:]:
+        lat, lon = waypoints[tgt]
+        while haversine(cs.lat, cs.lng, lat, lon) > 0.01:
 
-        closed_set.add(current_pos)
+            # Always check for obstacles (near island)
+            if is_near_island(cs.lat, cs.lng):
+                print("Obstacle detected: Near island! Turning left and moving straight to avoid...")
 
-        for neighbor_pos in get_valid_neighbors(grid, current_pos):
-            if neighbor_pos in closed_set:
-                continue
+                # Forced avoidance: Turn left for 3 seconds
+                for _ in range(3):
+                    Script.SendRC(3, 1500, False)
+                    Script.SendRC(4, 1100, True)  # Hard left yaw
+                    Script.Sleep(1000)
 
-            tentative_g = current_node['g'] + 1
+                # Move forward for ~200 meters (duration-based)
+                for _ in range(15):  # adjust for duration based on speed
+                    Script.SendRC(3, 1600, False)  # Slightly increase throttle for moving
+                    Script.SendRC(4, 1500, True)   # Keep yaw centered
+                    Script.Sleep(1000)
 
-            if neighbor_pos not in open_dict:
-                neighbor = create_node(
-                    position=neighbor_pos,
-                    g=tentative_g,
-                    parent=current_node
-                )
-                heapq.heappush(open_list, (neighbor['g'], neighbor_pos))
-                open_dict[neighbor_pos] = neighbor
-            elif tentative_g < open_dict[neighbor_pos]['g']:
-                neighbor = open_dict[neighbor_pos]
-                neighbor['g'] = tentative_g
-                neighbor['parent'] = current_node
+                continue  # Re-check position and continue toward the destination
 
+            # Otherwise, follow normal path
+            b = bearing(cs.lat, cs.lng, lat, lon)
+            Script.SendRC(3, 1550, False)
+            Script.SendRC(4, yaw_pwm(b), True)
+            Script.Sleep(1000)
+    Script.SendRC(3, 1500, True)
+    print("Arrived at destination!")
+
+# === A* PATH ===
+def a_star(start, goal):
+    heap, g = [(0, start, [])], {start: 0}
+    while heap:
+        _, current, path = heapq.heappop(heap)
+        path += [current]
+        if current == goal:
+            return path
+        for neighbor in [goal] if current == start else [start]:
+            dist = g[current] + haversine(*waypoints[current], *waypoints[neighbor])
+            if neighbor not in g or dist < g[neighbor]:
+                g[neighbor] = dist
+                h = haversine(*waypoints[neighbor], *waypoints[goal])
+                heapq.heappush(heap, (dist + h, neighbor, path))
     return []
 
-# --- Grid to Latitude/Longitude Conversion ---
-def grid_to_latlon(position: Tuple[int, int], grid_shape: Tuple[int, int],
-                   top_left: Tuple[float, float], bottom_right: Tuple[float, float]) -> Tuple[float, float]:
-    rows, cols = grid_shape
-    row, col = position
+def return_home(path):
+    print("Returning home...")
+    move(path[::-1])
 
-    lat1, lon1 = top_left
-    lat2, lon2 = bottom_right
+# === MAIN EXECUTION ===
+initialize_rc()
 
-    lat = lat1 + (lat2 - lat1) * (row / (rows - 1))
-    lon = lon1 + (lon2 - lon1) * (col / (cols - 1))
+waypoints = {
+    "home": (cs.lat, cs.lng),
+    "goal": (10.7258451, 106.7197323)
+}
+print(f"Home set at ({cs.lat:.7f}, {cs.lng:.7f})")
 
-    return (lat, lon)
-
-def convert_path_to_latlon(path: List[Tuple[int, int]], grid_shape: Tuple[int, int],
-                           top_left: Tuple[float, float], bottom_right: Tuple[float, float]) -> List[Tuple[float, float]]:
-    return [grid_to_latlon(pos, grid_shape, top_left, bottom_right) for pos in path]
-
-# --- Visualization ---
-def visualize_path(grid: np.ndarray, path: List[Tuple[int, int]]):
-    plt.figure(figsize=(10, 10))
-    plt.imshow(grid, cmap='binary')
-
-    if path:
-        path = np.array(path)
-        plt.plot(path[:, 1], path[:, 0], 'b-', linewidth=3, label='Path')
-        plt.plot(path[0, 1], path[0, 0], 'go', markersize=15, label='Start')
-        plt.plot(path[-1, 1], path[-1, 0], 'ro', markersize=15, label='Goal')
-
-    plt.grid(True)
-    plt.legend(fontsize=12)
-    plt.title("Dijkstra Pathfinding Result")
-    plt.show()
-
-# --- RUN TEST ---
-if __name__ == "__main__":
-    # Grid and obstacle definition
-    grid = np.zeros((20, 20))
-    grid[5:15, 5] = 1
-    grid[5, 5:15] = 1
-
-    start_pos = (0, 0)
-    goal_pos = (18, 18)
-
-    # Latitude and longitude bounds
-    top_left_latlon = (0,0)       
-    bottom_right_latlon = (10.7900, 106.7100)   
-
-    # Find path
-    path = find_path_dijkstra(grid, start_pos, goal_pos)
-    if path:
-        print(f"Path found with {len(path)} steps!")
-        visualize_path(grid, path)
-
-        latlon_path = convert_path_to_latlon(path, grid.shape, top_left_latlon, bottom_right_latlon)
-        print("Latitude/Longitude path:")
-        for latlon in latlon_path:
-            print(latlon)
-    else:
-        print("No path found!")
+path = a_star("home", "goal")
+if path:
+    move(path)  # Move towards the goal
+    return_home(path)  # Return home after reaching the goal
+else:
+    print("No path found")
