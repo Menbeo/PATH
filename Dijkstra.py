@@ -89,7 +89,7 @@ initialize_rc()
 
 waypoints = {
     "home": (cs.lat, cs.lng),
-    "goal": (10.7258451, 106.7197323)
+    "goal": (10.7271522, 106.7184448)
 }
 print(f"Home set at ({cs.lat:.7f}, {cs.lng:.7f})")
 
