@@ -39,12 +39,9 @@ def a_star(grid, start, goal):
 if __name__ == "__main__":
     # Generate grid and define start/goal
     grid = np.zeros((50, 50))
-    grid[10:15, 10:40] = 1
-    grid[30:35, 5:25] = 1
-    grid[20:25, 30:45] = 1
 
-    start = (0, 0)
-    goal = (49, 49)
+    start = (10,10)
+    goal = (46, 47)
 
     path = a_star(grid, start, goal)
 
