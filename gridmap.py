@@ -36,3 +36,10 @@ def create_grid_map(grid: np.ndarray, path: list[tuple[int, int]] = None):
     plt.grid(True)
     plt.legend()
     plt.show()
+
+#Like this
+# grid = grid_map()
+# create_grid_map(grid)
+
+
+  
