@@ -2,7 +2,6 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 #define map size 
-
 area = 288_409.51
 original_latitude = 10.9303312
 original_longtitude = 106.7925060
