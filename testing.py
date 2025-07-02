@@ -1,6 +1,5 @@
 from gridmap import create_grid_map, grid_map, default_goal, default_start
-# Import the conversion function from gridmap
-from gridmap import convert_grid_to_lat_lon
+from gridmap import convert_grid_to_lat_lon # Import the conversion function
 
 import numpy as np 
 import random 
@@ -34,7 +33,6 @@ def is_free(x, y, grid):
 
 def line_free(p1, p2, grid):
     steps = int(max(abs(p1[0]-p2[0]), abs(p1[1]-p2[1]))) + 1
-    # Handle cases where p1 and p2 are the same point to avoid division by zero if steps is 0
     if steps == 1: 
         return is_free(p1[0], p1[1], grid)
     
@@ -70,9 +68,9 @@ def dijkstra(graph, start_idx, goal_idx):
     dist[start_idx] = 0
     visited = set()
 
-    import heapq # Using heapq for efficiency
+    import heapq 
 
-    pq = [(0, start_idx)] # (distance, node_index)
+    pq = [(0, start_idx)] 
 
     while pq:
         d, current = heapq.heappop(pq)
@@ -84,7 +82,6 @@ def dijkstra(graph, start_idx, goal_idx):
             continue
         visited.add(current)
         
-        # Check if current exists in graph before iterating (for robustness)
         if current not in graph:
             continue
 
@@ -108,10 +105,58 @@ def dijkstra(graph, start_idx, goal_idx):
         path.reverse()
     return path
 
+def export_waypoints_qgc(lat_lon_path: list[tuple[float, float]], filename="huhu.waypoints", default_altitude=100):
+    """
+    Exports a list of (latitude, longitude) points to a QGC WPL 110 file.
+    
+    Args:
+        lat_lon_path: A list of tuples, where each tuple is (latitude, longitude).
+        filename: The name of the file to save the waypoints to.
+        default_altitude: The default altitude in meters for waypoints.
+    """
+    with open(filename, 'w') as f:
+        f.write("QGC WPL 110\n")
+
+        for i, (lat, lon) in enumerate(lat_lon_path):
+            # Waypoint Index
+            waypoint_index = i
+            
+            # Current (1 for first waypoint, 0 for others)
+            is_current = 1 if i == 0 else 0 
+            
+            # Autocontinue (3 to continue, 0 to stop)
+            autocontinue = 3 
+            
+            # Command (16 for MAV_CMD_NAV_WAYPOINT)
+            command = 16
+            
+            # Param1-Param4 (0 for all for simplicity, as per your example)
+            param1 = 0.0
+            param2 = 0.0
+            param3 = 0.0
+            param4 = 0.0 # Yaw angle, can be 0 or NaN
+            
+            # Latitude, Longitude, Altitude
+            latitude = lat
+            longitude = lon
+            altitude = default_altitude # Using a default altitude
+
+            # Frame (1 for MAV_FRAME_GLOBAL)
+            frame = 1
+
+            # Format the line with tabs as separators
+            line = (
+                f"{waypoint_index}\t{is_current}\t{autocontinue}\t{command}\t"
+                f"{param1:.8f}\t{param2:.8f}\t{param3:.8f}\t{param4:.8f}\t"
+                f"{latitude:.8f}\t{longitude:.8f}\t{altitude:.2f}\t{frame}\n"
+            )
+            f.write(line)
+    print(f"Waypoints exported to {filename}")
+
+
 if __name__ == "__main__":
     grid = grid_map()
 
-    # Optional safety check
     assert is_free(default_start[0], default_start[1], grid), "Start in obstacle"
     assert is_free(default_goal[0], default_goal[1], grid), "Goal in obstacle"
 
@@ -122,8 +167,7 @@ if __name__ == "__main__":
     start_idx = len(samples) - 2
     goal_idx = len(samples) - 1
 
-    # Increase radius or samples if path finding is often failing
-    graph = connect_nodes(samples, radius=70, grid=grid) # Increased radius slightly for better connectivity
+    graph = connect_nodes(samples, radius=70, grid=grid)
     path_idx = dijkstra(graph, start_idx, goal_idx)
 
     if path_idx:
@@ -142,7 +186,10 @@ if __name__ == "__main__":
         print("\n--- Path in Latitude and Longitude ---")
         for i, (lat, lon) in enumerate(lat_lon_path):
             print(f"Point {i+1}: Latitude: {lat:.6f}, Longitude: {lon:.6f}")
-
+            
+        # --- Export waypoints to QGC format ---
+        export_waypoints_qgc(lat_lon_path, filename="huhu.waypoints", default_altitude=100.0) # Using 50m as example altitude
+            
     else:
         print("No path found.")
         create_grid_map(grid, None)
