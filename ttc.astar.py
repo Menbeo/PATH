@@ -2,7 +2,7 @@ import numpy as np
 import math
 import heapq
 import matplotlib.pyplot as plt
-from gridmap import 
+
 
 # Define map size and resolution
 area = 288_409.51
