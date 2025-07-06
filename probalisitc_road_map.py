@@ -1,6 +1,6 @@
-from gridmap import create_grid_map, grid_map, default_goal, default_start
+from gridmaplv3 import create_grid_map, grid_map, default_goal, default_start
 # Import the conversion function from gridmap
-from gridmap import convert_grid_to_lat_lon
+from gridmaplv3 import convert_grid_to_lat_lon
 
 import numpy as np 
 import random 
