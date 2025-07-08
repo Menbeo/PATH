@@ -2,9 +2,9 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
-#define maximum longitude and latitude
-original_latitude = 10.9287722 
-original_longtitude = 106.7978704
+#define home longitude and latitude
+original_latitude = 10.9288775106096
+original_longtitude = 106.796958446503
 meters_per_grid = 1
 METERS_PER_DEGREE_LATITUDE = 111_139
 METERS_PER_DEGREE_LONGITUDE = 111_320 * math.cos(math.radians(original_latitude))

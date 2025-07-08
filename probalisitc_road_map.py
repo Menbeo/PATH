@@ -108,41 +108,59 @@ def dijkstra(graph, start_idx, goal_idx):
         path.reverse()
     return path
 
-if __name__ == "__main__":
-    grid = grid_map()
-
-    # Optional safety check
-    assert is_free(default_start[0], default_start[1], grid), "Start in obstacle"
-    assert is_free(default_goal[0], default_goal[1], grid), "Goal in obstacle"
-
-    samples = sample_points(600, grid)
-    samples.append(default_start)
-    samples.append(default_goal)
-
-    start_idx = len(samples) - 2
-    goal_idx = len(samples) - 1
-
-    # Increase radius or samples if path finding is often failing
-    graph = connect_nodes(samples, radius=70, grid=grid) # Increased radius slightly for better connectivity
-    path_idx = dijkstra(graph, start_idx, goal_idx)
-
-    if path_idx:
-        path = [samples[i] for i in path_idx]
-        animate_path(grid, path)
-
-        # --- Convert path to Latitude and Longitude ---
-        lat_lon_path = []
-        for point_x, point_y in path:
-            # Remember that convert_grid_to_lat_lon expects (x_grid, y_grid)
-            # and your grid points are stored as (row, column) which often maps to (y, x)
-            # So, we pass point_y as x_grid and point_x as y_grid
-            lat, lon = convert_grid_to_lat_lon(point_y, point_x) 
-            lat_lon_path.append((lat, lon))
-        
-        print("\n--- Path in Latitude and Longitude ---")
+def export_waypoints(lat_lon_path, filename="PRM.waypoints", default_altitude=500):
+    with open(filename, 'w') as f:
+        f.write("QGC WPL 110 \n")
         for i, (lat, lon) in enumerate(lat_lon_path):
-            print(f"Point {i+1}: Latitude: {lat:.6f}, Longitude: {lon:.6f}")
+            is_current = 1 if i == 0 else 0
+            autocontinue = 3
+            command = 16
+            param1 = param2 = param3 = param4 = 0.0
+            frame = 1
+            line = (
+                f"{i}\t{is_current}\t{autocontinue}\t{command}\t"
+                f"{param1:.8f}\t{param2:.8f}\t{param3:.8f}\t{param4:.8f}\t"
+                f"{lat:.8f}\t{lon:.8f}\t{default_altitude:.2f}\t{frame}\n"
+            )
+            f.write(line)
+    print(f"Exported to: {filename}")
 
-    else:
-        print("No path found.")
-        create_grid_map(grid, None)
+
+if __name__ == "__main__":
+    for map_id in range(1, 4):
+        print(f"\n=== Running PRM on Map {map_id} ===")
+        grid = grid_map(map_id=map_id)
+
+        assert is_free(default_start[0], default_start[1], grid), "Start in obstacle"
+        assert is_free(default_goal[0], default_goal[1], grid), "Goal in obstacle"
+
+        samples = sample_points(600, grid)
+        samples.append(default_start)
+        samples.append(default_goal)
+
+        start_idx = len(samples) - 2
+        goal_idx = len(samples) - 1
+
+        graph = connect_nodes(samples, radius=70, grid=grid)
+        path_idx = dijkstra(graph, start_idx, goal_idx)
+
+        if path_idx:
+            path = [samples[i] for i in path_idx]
+            animate_path(grid, path)
+
+            # Convert to GPS coordinates
+            lat_lon_path = [
+                convert_grid_to_lat_lon(point_y, point_x) for point_x, point_y in path
+            ]
+
+            print("\n--- Path in Latitude and Longitude ---")
+            for i, (lat, lon) in enumerate(lat_lon_path):
+                print(f"Point {i+1}: Latitude: {lat:.6f}, Longitude: {lon:.6f}")
+
+            # Export to file with map ID
+            filename = f"PRM_map{map_id}.waypoints"
+            export_waypoints(lat_lon_path, filename=filename)
+
+        else:
+            print("No path found.")
+            create_grid_map(grid, None)
