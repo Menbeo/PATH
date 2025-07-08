@@ -26,7 +26,6 @@ def convert_grid_to_lat_lon(x_grid: int, y_grid: int) -> tuple[float, float]:
 
     return latitude, longitude
 #default goal and start 
-
 default_start = (30,500)
 default_goal = (500,200)
 def grid_map( size=size):
@@ -61,7 +60,7 @@ def create_grid_map(grid: np.ndarray, path: list[tuple[int, int]] = None):
     plt.plot(default_goal[1],default_goal[0],'bo',markersize=10,label='Goal')
     plt.grid(True)
     plt.legend()
-    # plt.show()
+    plt.show()
 
 
 # # Like this
