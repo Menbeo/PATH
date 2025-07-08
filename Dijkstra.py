@@ -1,4 +1,4 @@
-from gridmaplv3 import create_grid_map,grid_map, default_goal, default_start, convert_grid_to_lat_lon
+from gridmap import create_grid_map,grid_map, default_goal, default_start, convert_grid_to_lat_lon
 import numpy as np 
 import matplotlib.pyplot as plt
 import heapq
@@ -39,7 +39,7 @@ def dijkstra(start, goal, grid):
     return path
 
 
-def export_waypoints(lat_lon_path: list[tuple[float,float]], filename  = "Dijkstra.waypoints", default_altitude=100):
+def export_waypoints(lat_lon_path: list[tuple[float,float]], filename  = "Dijkstra.waypoints", default_altitude=500):
     with open(filename, 'w') as f:
         f.write("QGC WPL 110 \n")
         for i, (lat,lon) in enumerate(lat_lon_path):
