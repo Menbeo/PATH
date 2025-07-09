@@ -70,9 +70,9 @@ def dijkstra(graph, start_idx, goal_idx):
     dist[start_idx] = 0
     visited = set()
 
-    import heapq # Using heapq for efficiency
+    import heapq 
 
-    pq = [(0, start_idx)] # (distance, node_index)
+    pq = [(0, start_idx)] 
 
     while pq:
         d, current = heapq.heappop(pq)
@@ -108,7 +108,7 @@ def dijkstra(graph, start_idx, goal_idx):
         path.reverse()
     return path
 
-def export_waypoints(lat_lon_path, filename="PRM.waypoints", default_altitude=500):
+def export_waypoints(lat_lon_path, filename="PRM.waypoints", default_altitude=50):
     with open(filename, 'w') as f:
         f.write("QGC WPL 110 \n")
         for i, (lat, lon) in enumerate(lat_lon_path):
@@ -127,40 +127,24 @@ def export_waypoints(lat_lon_path, filename="PRM.waypoints", default_altitude=50
 
 
 if __name__ == "__main__":
-    for map_id in range(1, 4):
+    for map_id in range(1, 5):
         print(f"\n=== Running PRM on Map {map_id} ===")
         grid = grid_map(map_id=map_id)
-
         assert is_free(default_start[0], default_start[1], grid), "Start in obstacle"
         assert is_free(default_goal[0], default_goal[1], grid), "Goal in obstacle"
-
         samples = sample_points(600, grid)
         samples.append(default_start)
         samples.append(default_goal)
-
         start_idx = len(samples) - 2
         goal_idx = len(samples) - 1
-
         graph = connect_nodes(samples, radius=70, grid=grid)
         path_idx = dijkstra(graph, start_idx, goal_idx)
-
         if path_idx:
             path = [samples[i] for i in path_idx]
             animate_path(grid, path)
-
-            # Convert to GPS coordinates
             lat_lon_path = [
                 convert_grid_to_lat_lon(point_y, point_x) for point_x, point_y in path
             ]
-
-            print("\n--- Path in Latitude and Longitude ---")
-            for i, (lat, lon) in enumerate(lat_lon_path):
-                print(f"Point {i+1}: Latitude: {lat:.6f}, Longitude: {lon:.6f}")
-
-            # Export to file with map ID
-            filename = f"PRM_map{map_id}.waypoints"
-            export_waypoints(lat_lon_path, filename=filename)
-
         else:
             print("No path found.")
             create_grid_map(grid, None)

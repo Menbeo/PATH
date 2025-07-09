@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import heapq
 
 # ========== CONFIGURATION ==========
-original_latitude = 10.9288775106096
-original_longitude = 106.796958446503
+original_latitude = 10.9288327400429
+original_longitude = 106.796797513962
 meters_per_grid = 1
 METERS_PER_DEGREE_LATITUDE = 111_139
 METERS_PER_DEGREE_LONGITUDE = 111_320 * math.cos(math.radians(original_latitude))

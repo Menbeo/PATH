@@ -2,6 +2,44 @@ from gridmap import create_grid_map,grid_map, default_goal, default_start, conve
 import numpy as np 
 import matplotlib.pyplot as plt
 import heapq
+import math
+
+#  path simplification implify path using Ramer-Douglas-Peucker algorithm
+def simplify_path(path, tolerance=10):
+   
+    if len(path) <= 2:
+        return path
+    
+    def perpendicular_distance(point, line_start, line_end):
+        # Calculate perpendicular distance from point to line
+        if line_start == line_end:
+            return math.dist(point, line_start)
+        
+        numerator = abs(
+            (line_end[0]-line_start[0])*(line_start[1]-point[1]) - 
+            (line_start[0]-point[0])*(line_end[1]-line_start[1])
+        )
+        denominator = math.dist(line_start, line_end)
+        return numerator / denominator
+    
+    # Find the point with maximum distance
+    max_dist = 0
+    index = 0
+    end = len(path) - 1
+    
+    for i in range(1, end):
+        dist = perpendicular_distance(path[i], path[0], path[end])
+        if dist > max_dist:
+            max_dist = dist
+            index = i
+    
+    # If max distance is greater than tolerance, recursively simplify
+    if max_dist > tolerance:
+        left = simplify_path(path[:index+1], tolerance)
+        right = simplify_path(path[index:], tolerance)
+        return left[:-1] + right
+    else:
+        return [path[0], path[-1]]
 
 def dijkstra(start, goal, grid, obstacle_penalty_radius=4):
     rows, cols = grid.shape
@@ -61,7 +99,7 @@ def dijkstra(start, goal, grid, obstacle_penalty_radius=4):
     return path
 
 
-def export_waypoints(lat_lon_path: list[tuple[float,float]], filename  = "Dijkstra.waypoints", default_altitude=500):
+def export_waypoints(lat_lon_path: list[tuple[float,float]], filename  = "Dijkstra.waypoints", default_altitude=1000):
     with open(filename, 'w') as f:
         f.write("QGC WPL 110 \n")
         for i, (lat,lon) in enumerate(lat_lon_path):
@@ -96,7 +134,8 @@ if __name__ == "__main__":
         if not path:
             print("No path")
         else:
-            create_grid_map(grid, path)
+            simplified_path = simplify_path(path, tolerance=2.0)
+            create_grid_map(grid, simplified_path)
             #convert to latitude and longitude 
             lat_lon_path = [convert_grid_to_lat_lon(x,y) for x,y in path]
             filename = f"Dijkstra_map{map_id}.waypoints"
