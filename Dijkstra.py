@@ -3,50 +3,54 @@ import numpy as np
 import matplotlib.pyplot as plt
 import heapq
 
-def dijkstra(start, goal, grid, min_straight_steps = 2):
+def dijkstra(start, goal, grid, obstacle_penalty_radius=4):
     rows, cols = grid.shape
+    directions = [(-1,0), (1,0), (0,-1), (0,1)] 
+    #Safety cost map (near obstacles)
+    safety_cost = np.zeros_like(grid, dtype=float)
+    for i in range(rows):
+        for j in range(cols):
+            if grid[i,j] == 1:  # Obstacle
+                safety_cost[i,j] = float('inf')  # Unpassable
+            else:
+                # Check cells around (i,j) for obstacles
+                min_dist_to_obstacle = float('inf')
+                for di in range(-obstacle_penalty_radius, obstacle_penalty_radius+1):
+                    for dj in range(-obstacle_penalty_radius, obstacle_penalty_radius+1):
+                        ni, nj = i + di, j + dj
+                        if 0 <= ni < rows and 0 <= nj < cols and grid[ni,nj] == 1:
+                            dist = (di**2 + dj**2)**0.5  # Euclidean distance
+                            if dist < min_dist_to_obstacle:
+                                min_dist_to_obstacle = dist
+                # Assign higher cost to cells closer to obstacles
+                safety_cost[i,j] = 1 + max(0, (obstacle_penalty_radius - min_dist_to_obstacle)) * 10
+    
     visited = set()
     distance = {start: 0}
     previous = {}
-    queue = []
-    directions = [(-1,0), (1,0), (0,-1), (0,1)]
-
-    heapq.heappush(queue,(0, start, None))
-    distance[(start,None)] = 0
-
+    queue = [(0, start)]
+    
     while queue:
-        cost,current,prev_dir, straight_steps = heapq.heappop(queue)
-        
-        if (current,prev_dir) in visited:
+        cost, current = heapq.heappop(queue)
+        if current in visited:
             continue
-        visited.add((current,prev_dir))
+        visited.add(current)
         if current == goal:
             break
-       
+        
         for dx, dy in directions:
             neighbor = current[0] + dx, current[1] + dy
             if 0 <= neighbor[0] < rows and 0 <= neighbor[1] < cols:
-                if grid[neighbor] == 0:
-                    new_dir = (dx,dy)
-                    if prev_dir is None or new_dir == prev_dir:
-                        turn_penalty = 0
-                        new_straight_steps = straight_steps + 1
-                    else:
-                        # disallow sharp turns if not moved enough
-                        if straight_steps < min_straight_steps:
-                            continue  # skip this turn
-                        turn_penalty = 5  # optional: add a penalty
-                        new_straight_steps = 1  # reset
-
-                    new_cost = cost + 1 + turn_penalty
-
-                    if new_cost < distance.get((neighbor, new_dir), float('inf')):
-                        distance[(neighbor,new_dir)] = new_cost
+                if safety_cost[neighbor] < float('inf'):  # Passable
+                    new_cost = cost + safety_cost[neighbor]
+                    if new_cost < distance.get(neighbor, float('inf')):
+                        distance[neighbor] = new_cost
                         previous[neighbor] = current
-                        heapq.heappush(queue,(new_cost,neighbor,new_dir,new_straight_steps))
+                        heapq.heappush(queue, (new_cost, neighbor))
+    
     # Reconstruct path
-    node = goal
     path = []
+    node = goal
     while node != start:
         path.append(node)
         node = previous.get(node)
@@ -57,7 +61,7 @@ def dijkstra(start, goal, grid, min_straight_steps = 2):
     return path
 
 
-def export_waypoints(lat_lon_path: list[tuple[float,float]], filename  = "Dijkstra.waypoints", default_altitude=100):
+def export_waypoints(lat_lon_path: list[tuple[float,float]], filename  = "Dijkstra.waypoints", default_altitude=500):
     with open(filename, 'w') as f:
         f.write("QGC WPL 110 \n")
         for i, (lat,lon) in enumerate(lat_lon_path):
@@ -86,9 +90,9 @@ def export_waypoints(lat_lon_path: list[tuple[float,float]], filename  = "Dijkst
 
 
 if __name__ == "__main__":
-    for map_id in range(1,4):
+    for map_id in range(1,5):
         grid = grid_map(map_id=map_id)
-        path = dijkstra(default_start, default_goal, grid,min_straight_steps = 2)
+        path = dijkstra(default_start, default_goal, grid)
         if not path:
             print("No path")
         else:
