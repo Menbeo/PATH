@@ -17,26 +17,62 @@ PENALTY = 1e6
 grid = grid_map()
 rows, cols = grid.shape
 
-def is_collision_free(grid, path):
+def is_collision_free(grid, path, margin=2):
+    """Check if path avoids obstacles with safety margin"""
     for i in range(1, len(path)):
-        x0, y0 = path[i - 1]
-        x1, y1 = path[i]
-        x_vals = np.linspace(x0, x1, 100)
-        y_vals = np.linspace(y0, y1, 100)
-        for x, y in zip(x_vals.astype(int), y_vals.astype(int)):
-            if x < 0 or y < 0 or x >= rows or y >= cols or grid[x, y] == 1:
-                return False
+        x0, y0 = int(round(path[i-1][0])), int(round(path[i-1][1]))
+        x1, y1 = int(round(path[i][0])), int(round(path[i][1]))
+        
+        # Bresenham's line algorithm
+        dx = abs(x1 - x0)
+        dy = -abs(y1 - y0)
+        sx = 1 if x0 < x1 else -1
+        sy = 1 if y0 < y1 else -1
+        err = dx + dy
+        
+        while True:
+            # Check current cell and surrounding margin
+            for di in range(-margin, margin+1):
+                for dj in range(-margin, margin+1):
+                    xi, yj = x0 + di, y0 + dj
+                    if (0 <= xi < grid.shape[0] and 0 <= yj < grid.shape[1] 
+                        and grid[xi, yj] == 1):
+                        return False
+            
+            if x0 == x1 and y0 == y1:
+                break
+            e2 = 2 * err
+            if e2 >= dy:
+                err += dy
+                x0 += sx
+            if e2 <= dx:
+                err += dx
+                y0 += sy
     return True
 
-def fitness_function(particle):
+def fitness_function(particle, grid):
     waypoints = [default_start] + list(particle.reshape(-1, 2)) + [default_goal]
-    total_dist = 0
-    for i in range(1, len(waypoints)):
-        total_dist += np.linalg.norm(np.array(waypoints[i]) - np.array(waypoints[i - 1]))
+    
+    # 1. Distance cost (shorter paths are better)
+    path_length = sum(np.linalg.norm(np.array(waypoints[i])-np.array(waypoints[i-1])) 
+                   for i in range(1, len(waypoints)))
+    
+    # 2. Collision penalty (HIGH cost for obstacles)
     if not is_collision_free(grid, waypoints):
-        total_dist += PENALTY
-    return total_dist
-
+        return float('inf')
+    
+    # 3. Proximity penalty (stay away from obstacles)
+    proximity_cost = 0
+    for wp in waypoints:
+        x, y = int(round(wp[0])), int(round(wp[1]))
+        for di in range(-3, 4):  # Check 3-cell radius
+            for dj in range(-3, 4):
+                xi, yj = x+di, y+dj
+                if (0 <= xi < grid.shape[0] and 0 <= yj < grid.shape[1] 
+                    and grid[xi, yj] == 1):
+                    proximity_cost += 1/(di**2 + dj**2 + 1e-6)  # Inverse square law
+    
+    return path_length + 10*proximity_cost  # Weighted sum
 # Initialize particles
 particles = np.random.randint(0, rows, (POP_SIZE, NUM_WAYPOINTS * 2))
 velocities = np.zeros_like(particles)

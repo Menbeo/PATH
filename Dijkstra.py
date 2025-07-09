@@ -4,17 +4,35 @@ import matplotlib.pyplot as plt
 import heapq
 import math
 
-#  path simplification implify path using Ramer-Douglas-Peucker algorithm
-def simplify_path(path, tolerance=10):
-   
-    if len(path) <= 2:
+def simplify_path(path, max_waypoints=10, initial_tolerance=2.0):
+    """
+    Simplify path with adaptive tolerance to ensure ≤ max_waypoints
+    Returns simplified path with guaranteed waypoint count limit
+    """
+    if len(path) <= max_waypoints:
         return path
     
+    def rdp_simplify(points, tol):
+        """Ramer-Douglas-Peucker implementation"""
+        if len(points) <= 2:
+            return points
+        max_dist = 0
+        index = 0
+        for i in range(1, len(points)-1):
+            dist = perpendicular_distance(points[i], points[0], points[-1])
+            if dist > max_dist:
+                max_dist = dist
+                index = i
+        if max_dist > tol:
+            left = rdp_simplify(points[:index+1], tol)
+            right = rdp_simplify(points[index:], tol)
+            return left[:-1] + right
+        return [points[0], points[-1]]
+    
     def perpendicular_distance(point, line_start, line_end):
-        # Calculate perpendicular distance from point to line
+        """Calculate perpendicular distance from point to line segment"""
         if line_start == line_end:
             return math.dist(point, line_start)
-        
         numerator = abs(
             (line_end[0]-line_start[0])*(line_start[1]-point[1]) - 
             (line_start[0]-point[0])*(line_end[1]-line_start[1])
@@ -22,24 +40,27 @@ def simplify_path(path, tolerance=10):
         denominator = math.dist(line_start, line_end)
         return numerator / denominator
     
-    # Find the point with maximum distance
-    max_dist = 0
-    index = 0
-    end = len(path) - 1
+    # Binary search for optimal tolerance to get ≤ max_waypoints
+    low, high = 0.0, initial_tolerance
+    best_path = path
+    for _ in range(10):  # Max iterations for binary search
+        mid = (low + high) / 2
+        simplified = rdp_simplify(path, mid)
+        if len(simplified) > max_waypoints:
+            low = mid
+        else:
+            high = mid
+            best_path = simplified
+            if len(best_path) == max_waypoints:
+                break
     
-    for i in range(1, end):
-        dist = perpendicular_distance(path[i], path[0], path[end])
-        if dist > max_dist:
-            max_dist = dist
-            index = i
+    # If still too many, take evenly spaced points
+    if len(best_path) > max_waypoints:
+        step = len(best_path) / (max_waypoints - 1)
+        indices = [int(i*step) for i in range(max_waypoints-1)] + [len(best_path)-1]
+        best_path = [best_path[i] for i in indices]
     
-    # If max distance is greater than tolerance, recursively simplify
-    if max_dist > tolerance:
-        left = simplify_path(path[:index+1], tolerance)
-        right = simplify_path(path[index:], tolerance)
-        return left[:-1] + right
-    else:
-        return [path[0], path[-1]]
+    return best_path
 
 def dijkstra(start, goal, grid, obstacle_penalty_radius=4):
     rows, cols = grid.shape
@@ -134,10 +155,10 @@ if __name__ == "__main__":
         if not path:
             print("No path")
         else:
-            simplified_path = simplify_path(path, tolerance=2.0)
+            simplified_path = simplify_path(path, max_waypoints=10, initial_tolerance=4.0)
             create_grid_map(grid, simplified_path)
             #convert to latitude and longitude 
-            lat_lon_path = [convert_grid_to_lat_lon(x,y) for x,y in path]
+            lat_lon_path = [convert_grid_to_lat_lon(x,y) for x,y in simplified_path]
             filename = f"Dijkstra_map{map_id}.waypoints"
             export_waypoints(lat_lon_path, filename=filename)
         
