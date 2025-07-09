@@ -9,7 +9,6 @@ meters_per_grid = 1
 METERS_PER_DEGREE_LATITUDE = 111_139
 METERS_PER_DEGREE_LONGITUDE = 111_320 * math.cos(math.radians(original_latitude))
 
-
 #Convert to circle 
 def plot_circle(grid: np.ndarray, center: tuple[int,int], radius: int):
     x_c,y_c = center
@@ -26,21 +25,24 @@ def convert_grid_to_lat_lon(x_grid: int, y_grid: int) -> tuple[float, float]:
     longitude = original_longtitude + (delta_x_meters / METERS_PER_DEGREE_LONGITUDE)
 
     return latitude, longitude
+
 #default goal and start 
 default_start = (5,5)
 default_goal = (48,5)
 
-#Three map with different obstacles
+#Three map with different obstacles - easy -> hard -> super hard :>
 def grid_map (map_id = 1, size=50):
     grid = np.zeros((size,size))
     
     if map_id == 1:
-        #Grid map1
+        #Grid map 1
         grid[10:20, 30:53] = 1  
         grid[30:40, 15:35] = 1
         grid[10:20, 10:20] = 1
         grid[30:40, 40:50] = 1
         grid[20:30, 0:6] = 1
+        grid[40:45, 0:10] = 1
+        
     elif map_id == 2:
         # Grid map 2
         grid[8:10, 5:20] = 1
@@ -52,7 +54,7 @@ def grid_map (map_id = 1, size=50):
         plot_circle(grid, center=(10,30), radius=4)
         plot_circle(grid, center=(45,20), radius=4)
         plot_circle(grid, center=(25,15), radius=4)
-        plot_circle(grid, center=(40,5), radius=4)
+        plot_circle(grid, center=(39,5), radius=6)
     
     elif map_id == 3:
 
@@ -61,16 +63,16 @@ def grid_map (map_id = 1, size=50):
         grid[10:20, 0:20] = 1
         grid[30:40, 40:50] = 1
         grid[20:30, 0:6] = 1
-        grid[38:45, 1:12] = 1
+        grid[38:45, 0:12] = 1
 
         plot_circle(grid, center=(10,30), radius=4)
         plot_circle(grid, center=(45,20), radius=4)
         plot_circle(grid, center=(25,15), radius=4)
-        plot_circle(grid, center=(30,30), radius=6)
+        plot_circle(grid, center=(30,30), radius=8)
     return grid
 
 def create_grid_map(grid: np.ndarray, path: list[tuple[int, int]] = None):
-    plt.imshow(grid, cmap='binary')
+    # plt.imshow(grid, cmap='binary')
     plt.figure(figsize=(10, 10))
     plt.title("Grid Map with Path")
     plt.imshow(grid, cmap='gray_r', origin='upper',extent=[0,50,50,0])
@@ -90,7 +92,7 @@ def create_grid_map(grid: np.ndarray, path: list[tuple[int, int]] = None):
     plt.show()
 
 
-# # # Like this
+# # testing for map
 # for i in range(1,4):
 #     grid = grid_map(map_id=i)
 #     print(f"display grid map {i}")
