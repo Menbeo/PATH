@@ -39,6 +39,14 @@ def plot_rhombus(grid, center, height, width):
             if 0 <= x < grid.shape[0] and 0 <= y < grid.shape[1]:
                 grid[x, y] = 1
 
+def convert_grid_to_lat_lon(x_grid: int, y_grid: int) -> tuple[float, float]:
+    delta_x_meters = x_grid * meters_per_grid
+    delta_y_meters = y_grid * meters_per_grid
+    latitude = original_latitude - (delta_y_meters / METERS_PER_DEGREE_LATITUDE)
+    longitude = original_longitude + (delta_x_meters / METERS_PER_DEGREE_LONGITUDE)
+
+    return latitude, longitude
+
 # ========== MAP GENERATOR ==========
 def grid_map(map_id=1, size=50):
     grid = np.zeros((size, size))
@@ -60,33 +68,35 @@ def grid_map(map_id=1, size=50):
 
     elif map_id == 3:
         grid[8:10, 5:20] = 1
-        grid[22:30, 22:30] = 1
-        grid[10:20, 40:48] = 1  
+        grid[22:40, 22:30] = 1
+        grid[10:20, 40:53] = 1  
         grid[10:20, 10:20] = 1
         grid[30:40, 40:50] = 1
-        plot_circle(grid, center=(10, 30), radius=4)
-        plot_circle(grid, center=(45, 20), radius=4)
-        plot_circle(grid, center=(25, 15), radius=4)
-        plot_circle(grid, center=(40, 5), radius=4)
+    
+        plot_circle(grid, center=(10,30), radius=4)
+        plot_circle(grid, center=(45,20), radius=4)
+        plot_circle(grid, center=(25,15), radius=4)
+        plot_circle(grid, center=(40,5), radius=4)
 
     elif map_id == 4:
-        grid[10:20, 30:48] = 1  
+        grid[10:20, 30:53] = 1  
         grid[10:20, 0:20] = 1
         grid[30:40, 40:50] = 1
         grid[20:30, 0:6] = 1
         grid[38:45, 1:12] = 1
-        plot_circle(grid, center=(10, 30), radius=4)
-        plot_circle(grid, center=(45, 20), radius=4)
-        plot_circle(grid, center=(25, 15), radius=4)
-        plot_circle(grid, center=(30, 30), radius=6)
+
+        plot_circle(grid, center=(10,30), radius=4)
+        plot_circle(grid, center=(45,20), radius=4)
+        plot_circle(grid, center=(25,15), radius=4)
+        plot_circle(grid, center=(30,30), radius=6)
     return grid
 
 
 def create_grid_map(grid: np.ndarray, path=None):
+
     plt.figure(figsize=(10, 10))
     plt.title("Grid Map with Path")
     plt.imshow(grid, cmap='gray_r', origin='upper', extent=[0, 50, 50, 0])
-
     if path:
         path_x, path_y = zip(*path)
         plt.plot(path_y, path_x, color='blue', linewidth=2, label='Path')
@@ -97,7 +107,6 @@ def create_grid_map(grid: np.ndarray, path=None):
     plt.xticks(np.arange(0, 55, 5))
     plt.yticks(np.arange(0, 55, 5))
     plt.xlim(0, 50)
-    plt.ylim(0, 50)
     plt.gca().set_aspect('equal')
     plt.grid(True)
     plt.legend()
