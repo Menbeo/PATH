@@ -11,8 +11,8 @@ METERS_PER_DEGREE_LATITUDE = 111_139
 METERS_PER_DEGREE_LONGITUDE = 111_320 * math.cos(math.radians(original_latitude))
 
 # Start and goal
-default_start = (5, 5)
-default_goal = (48, 5)
+default_start = (2, 2)
+default_goal = (47, 47)
 
 # ========== SHAPE HELPERS ==========
 def plot_circle(grid, center, radius):
@@ -104,8 +104,7 @@ def create_grid_map(grid: np.ndarray, path=None):
     plt.plot(default_start[1], default_start[0], 'go', markersize=10, label='Start')
     plt.plot(default_goal[1], default_goal[0], 'ro', markersize=10, label='Goal')
 
-    #Invert the axis
-    plt.gca().invert_yaxis()
+  
 
     plt.xticks(np.arange(0, 55, 5))
     plt.yticks(np.arange(0, 55, 5))
