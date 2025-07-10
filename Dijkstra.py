@@ -5,15 +5,10 @@ import heapq
 import math
 
 def simplify_path(path, max_waypoints=10, initial_tolerance=2.0):
-    """
-    Simplify path with adaptive tolerance to ensure ≤ max_waypoints
-    Returns simplified path with guaranteed waypoint count limit
-    """
     if len(path) <= max_waypoints:
         return path
     
     def rdp_simplify(points, tol):
-        """Ramer-Douglas-Peucker implementation"""
         if len(points) <= 2:
             return points
         max_dist = 0
@@ -30,7 +25,6 @@ def simplify_path(path, max_waypoints=10, initial_tolerance=2.0):
         return [points[0], points[-1]]
     
     def perpendicular_distance(point, line_start, line_end):
-        """Calculate perpendicular distance from point to line segment"""
         if line_start == line_end:
             return math.dist(point, line_start)
         numerator = abs(
@@ -40,10 +34,10 @@ def simplify_path(path, max_waypoints=10, initial_tolerance=2.0):
         denominator = math.dist(line_start, line_end)
         return numerator / denominator
     
-    # Binary search for optimal tolerance to get ≤ max_waypoints
+    
     low, high = 0.0, initial_tolerance
     best_path = path
-    for _ in range(10):  # Max iterations for binary search
+    for _ in range(10):
         mid = (low + high) / 2
         simplified = rdp_simplify(path, mid)
         if len(simplified) > max_waypoints:

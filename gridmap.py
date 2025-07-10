@@ -104,6 +104,9 @@ def create_grid_map(grid: np.ndarray, path=None):
     plt.plot(default_start[1], default_start[0], 'go', markersize=10, label='Start')
     plt.plot(default_goal[1], default_goal[0], 'ro', markersize=10, label='Goal')
 
+    #Invert the axis
+    plt.gca().invert_yaxis()
+
     plt.xticks(np.arange(0, 55, 5))
     plt.yticks(np.arange(0, 55, 5))
     plt.xlim(0, 50)

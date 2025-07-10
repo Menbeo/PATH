@@ -1,8 +1,31 @@
-from gridmap import create_grid_map, grid_map, default_goal, default_start, convert_grid_to_lat_lon
+from gridmap import create_grid_map, grid_map, default_goal, default_start
+# Import the conversion function from gridmap
+from gridmap import convert_grid_to_lat_lon
+
 import numpy as np 
 import random 
 import math 
 import matplotlib.pyplot as plt
+
+def animate_path(grid, path, delay=0.01):
+    plt.figure(figsize=(10, 10))
+    plt.title("PRM Path Animation")
+    plt.imshow(grid, cmap='gray_r', origin='upper')
+
+    # Draw start and goal
+    plt.plot(default_start[1], default_start[0], 'go', markersize=10, label='Start')
+    plt.plot(default_goal[1], default_goal[0], 'ro', markersize=10, label='Goal') # Changed to 'ro' for consistency
+    plt.legend()
+
+    # Draw path one point at a time
+    for i in range(1, len(path)):
+        x0, y0 = path[i-1]
+        x1, y1 = path[i]
+        plt.plot([y0, y1], [x0, x1], 'b-', linewidth=2)
+        plt.pause(delay)
+
+    plt.grid(True)
+    plt.show()
 
 def is_free(x, y, grid):
     x = int(x)
