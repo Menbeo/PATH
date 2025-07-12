@@ -50,25 +50,12 @@ def convert_grid_to_lat_lon(x_grid: int, y_grid: int) -> tuple[float, float]:
     return latitude, longitude
 #===== SCENARIOS 2: RANDOM OBSTACLES ======
 
-def random_obstacles(grid, start, goal, size = 50, min_distance = 8, used_centers = None):
-    #Minimum distance between obstacles (to make the obstacles more scatter)
-    # min_distance = 8
-    #from start and goal - may overlap
-    min = 7
+def random_obstacles(grid,size = 50, obstacle = 11):
 
-    for _ in range(100):
+    for _ in range(obstacle):
         x,y = random.randint(0, size - 1), random.randint(0, size-1)
-    
-        if (math.hypot(x - start[0], y - start[1]) < min) or \
-           (math.hypot(x - goal[0], y - goal[1]) < min):
-            continue
-        #Check distance 
-        if used_centers:
-            too_close = any(math.hypot(x - xc, y - yc) < min_distance for xc, yc in used_centers)
-            if too_close:
-                continue
+
         #Random select size 
-        # size_category = random.choice(["small", "medium", "large"])
         shape = random.choice(
             ["circle", "diamond", "rhombus", "grid"])
         size = random.randint(1,6)
@@ -91,8 +78,6 @@ def random_obstacles(grid, start, goal, size = 50, min_distance = 8, used_center
             if x + h < size and y + w < size:
                 grid[x:x+h, y:y+w] = 1
         
-        if used_centers is not None: 
-            used_centers.add((x,y))
     return True
 
 # ========== MAP GENERATOR ==========
@@ -100,20 +85,35 @@ def grid_map(map_id=1, size=50):
     grid = np.zeros((size, size))
 
     if map_id == 1:
-        grid[5:20, 30:50] = 1  
-        grid[30:40, 15:35] = 1
-        grid[5:15, 0:20] = 1
-        grid[30:40, 40:50] = 1
-        grid[20:30, 0:6] = 1
+        # Scenario 1: Uniform arrangement
+        centers = [
+            (8,8), (8,25), (8,42),
+            (25,8), (25,25), (25,42),
+            (42,8), (42,25), (42,42),
+            (15,35)
+        ]
+        shapes = [
+            ("circle",2), ("diamond",3), ("rhombus",(4,3)),
+            ("circle",4), ("diamond",2), ("rhombus",(3,5)),
+            ("circle",5), ("diamond",4), ("rhombus",(2,2)),
+            ("circle",3)
+        ]
+        for (cx,cy),(shape,param) in zip(centers, shapes):
+            if shape == "circle":
+                plot_circle(grid, (cx,cy), param)
+            elif shape == "diamond":
+                plot_diamond(grid, (cx,cy), param)
+            elif shape == "rhombus":
+                h,w = param
+                plot_rhombus(grid, (cx,cy), h, w)
     
     elif map_id == 2:
         #Scenario 2 - Random Gridmap
         obstacle = 10
         placed = 0 
         while placed <= obstacle:
-            if random_obstacles(grid, default_start, default_goal,   
-                                min_distance=5):
-                placed += 0.5
+            if random_obstacles(grid):
+                placed += 1
 
     elif map_id == 3:
         grid[8:10, 5:20] = 1
@@ -168,6 +168,6 @@ def create_grid_map(grid: np.ndarray, path=None):
     plt.show()
 
 if __name__ == "__main__":
-    print(f"Displaying Map {4}")
-    grid = grid_map(map_id=4)
+    print(f"Displaying Map {2}")
+    grid = grid_map(map_id=2)
     create_grid_map(grid)
