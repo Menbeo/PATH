@@ -100,9 +100,9 @@ def grid_map(map_id=1, size=50):
     grid = np.zeros((size, size))
 
     if map_id == 1:
-        grid[10:20, 30:50] = 1  
+        grid[5:20, 30:50] = 1  
         grid[30:40, 15:35] = 1
-        grid[10:20, 10:20] = 1
+        grid[5:15, 0:20] = 1
         grid[30:40, 40:50] = 1
         grid[20:30, 0:6] = 1
     
@@ -128,7 +128,20 @@ def grid_map(map_id=1, size=50):
         plot_circle(grid, center=(40,5), radius=4)
 
     elif map_id == 4:
-       
+       #Scenarios 4 - Clustering Degree - grouped
+       #Simple shaped 
+        grid[5:20, 35:53] = 1  
+        grid[5:20, 0:24] = 1
+        grid[30:45, 30:50] = 1
+        grid[20:23, 15:25] = 1
+        #Complex shaped
+        plot_circle(grid, center=(10,30), radius=3)
+        plot_circle(grid, center=(45,20), radius=4)
+        plot_circle(grid, center=(40,5), radius=7)
+        plot_diamond(grid, (25,35), 6)
+        plot_rhombus(grid, (25,5), 4, 5)
+        plot_rhombus(grid,(30,16), 9, 10)
+
     return grid
 
 
@@ -155,6 +168,6 @@ def create_grid_map(grid: np.ndarray, path=None):
     plt.show()
 
 if __name__ == "__main__":
-    print(f"Displaying Map {2}")
-    grid = grid_map(map_id=2)
+    print(f"Displaying Map {4}")
+    grid = grid_map(map_id=4)
     create_grid_map(grid)
