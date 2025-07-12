@@ -54,7 +54,7 @@ def random_obstacles(grid, start, goal, size = 50, min_distance = 8, used_center
     #Minimum distance between obstacles (to make the obstacles more scatter)
     # min_distance = 8
     #from start and goal - may overlap
-    min = 6
+    min = 7
 
     for _ in range(100):
         x,y = random.randint(0, size - 1), random.randint(0, size-1)
@@ -108,16 +108,12 @@ def grid_map(map_id=1, size=50):
     
     elif map_id == 2:
         #Scenario 2 - Random Gridmap
-        used_centers = set()
         obstacle = 10
         placed = 0 
         while placed <= obstacle:
-            if random_obstacles(grid, default_start, default_goal, 
-                                size=size, 
-                                used_centers=used_centers, 
+            if random_obstacles(grid, default_start, default_goal,   
                                 min_distance=5):
-                placed += 1
-       
+                placed += 0.5
 
     elif map_id == 3:
         grid[8:10, 5:20] = 1
@@ -132,16 +128,7 @@ def grid_map(map_id=1, size=50):
         plot_circle(grid, center=(40,5), radius=4)
 
     elif map_id == 4:
-        grid[10:20, 30:53] = 1  
-        grid[10:20, 0:20] = 1
-        grid[30:40, 40:50] = 1
-        grid[20:30, 0:6] = 1
-        grid[38:45, 1:12] = 1
-
-        plot_circle(grid, center=(10,30), radius=4)
-        plot_circle(grid, center=(45,20), radius=4)
-        plot_circle(grid, center=(25,15), radius=4)
-        plot_circle(grid, center=(30,30), radius=6)
+       
     return grid
 
 
