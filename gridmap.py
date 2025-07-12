@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-import heapq
+import random
 
 # ========== CONFIGURATION ==========
 original_latitude = 10.9288327400429
@@ -39,6 +39,8 @@ def plot_rhombus(grid, center, height, width):
             if 0 <= x < grid.shape[0] and 0 <= y < grid.shape[1]:
                 grid[x, y] = 1
 
+#=== Convert grid ====
+
 def convert_grid_to_lat_lon(x_grid: int, y_grid: int) -> tuple[float, float]:
     delta_x_meters = x_grid * meters_per_grid
     delta_y_meters = y_grid * meters_per_grid
@@ -46,6 +48,44 @@ def convert_grid_to_lat_lon(x_grid: int, y_grid: int) -> tuple[float, float]:
     longitude = original_longitude + (delta_x_meters / METERS_PER_DEGREE_LONGITUDE)
 
     return latitude, longitude
+#===== SCENARIOS 2: RANDOM OBSTACLES ======
+
+def random_obstacles(grid, start, goal, size = 50):
+    #Minimum distance between obstacles (to make the obstacles more scatter)
+    min_distance = 8
+    x = random.randint(0, size - 1)
+    y = random.randint(0, size - 1)
+    if (x,y) == start or (x,y) == goal:
+        return False
+    
+    #Random select size 
+    size_category = random.choice(["small", "medium", "large"])
+    shape = random.choice(["circle", "diamond", "rhombus"])
+
+    #Choose area (small, medium, large) based on size 
+    if size_category == "small":
+        area_target = random.randint(1,3)
+    elif size_category == "medium":
+        area_target = random.randint(3,6)
+    else:
+        area_target = random.randint(7,12) 
+
+    #Shape: Simple shape & complex shape  
+    if shape == "circle":
+        radius = int((area_target / 3.14)**0.5)
+        radius = max(1, min(radius, size//2))
+        plot_circle(grid, (x,y), radius)
+    
+    elif shape == "diamond":
+        size_d = min(area_target, size // 2)
+        plot_diamond(grid, (x,y), size_d)
+    
+    elif shape == "rhombus":
+        h = random.randint(1, min(4, size // 2))
+        w = max(1, min(area_target // h , size // 2))
+        plot_rhombus(grid, (x,y), h , w)
+    
+    return True
 
 # ========== MAP GENERATOR ==========
 def grid_map(map_id=1, size=50):
@@ -59,12 +99,13 @@ def grid_map(map_id=1, size=50):
         grid[20:30, 0:6] = 1
     
     elif map_id == 2:
-        plot_circle(grid, center=(15, 5), radius=3)   # In path
-        plot_circle(grid, center=(25, 5), radius=4)   # In path
-        plot_circle(grid, center=(35, 5), radius=2)   # In path
-        grid[20:30, 3:8] = 1                          # Rectangle in path
-        plot_diamond(grid, center=(30, 30), size=6)
-        plot_rhombus(grid, center=(10, 40), height=5, width=14)
+        #Scenario 2 - Random Gridmap
+        obstacle = 10 
+        placed = 0 
+        while placed < obstacle:
+            if random_obstacles(grid, default_start, default_goal, size=size):
+                placed += 1
+       
 
     elif map_id == 3:
         grid[8:10, 5:20] = 1
