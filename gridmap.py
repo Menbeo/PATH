@@ -50,41 +50,49 @@ def convert_grid_to_lat_lon(x_grid: int, y_grid: int) -> tuple[float, float]:
     return latitude, longitude
 #===== SCENARIOS 2: RANDOM OBSTACLES ======
 
-def random_obstacles(grid, start, goal, size = 50):
+def random_obstacles(grid, start, goal, size = 50, min_distance = 8, used_centers = None):
     #Minimum distance between obstacles (to make the obstacles more scatter)
-    min_distance = 8
-    x = random.randint(0, size - 1)
-    y = random.randint(0, size - 1)
-    if (x,y) == start or (x,y) == goal:
-        return False
-    
-    #Random select size 
-    size_category = random.choice(["small", "medium", "large"])
-    shape = random.choice(["circle", "diamond", "rhombus"])
+    # min_distance = 8
+    #from start and goal - may overlap
+    min = 6
 
-    #Choose area (small, medium, large) based on size 
-    if size_category == "small":
-        area_target = random.randint(1,3)
-    elif size_category == "medium":
-        area_target = random.randint(3,6)
-    else:
-        area_target = random.randint(7,12) 
+    for _ in range(100):
+        x,y = random.randint(0, size - 1), random.randint(0, size-1)
+    
+        if (math.hypot(x - start[0], y - start[1]) < min) or \
+           (math.hypot(x - goal[0], y - goal[1]) < min):
+            continue
+        #Check distance 
+        if used_centers:
+            too_close = any(math.hypot(x - xc, y - yc) < min_distance for xc, yc in used_centers)
+            if too_close:
+                continue
+        #Random select size 
+        # size_category = random.choice(["small", "medium", "large"])
+        shape = random.choice(
+            ["circle", "diamond", "rhombus", "grid"])
+        size = random.randint(1,6)
 
-    #Shape: Simple shape & complex shape  
-    if shape == "circle":
-        radius = int((area_target / 3.14)**0.5)
-        radius = max(1, min(radius, size//2))
-        plot_circle(grid, (x,y), radius)
-    
-    elif shape == "diamond":
-        size_d = min(area_target, size // 2)
-        plot_diamond(grid, (x,y), size_d)
-    
-    elif shape == "rhombus":
-        h = random.randint(1, min(4, size // 2))
-        w = max(1, min(area_target // h , size // 2))
-        plot_rhombus(grid, (x,y), h , w)
-    
+        #Shape: Simple shape & complex shape  + size random 
+        if shape == "circle":
+            plot_circle(grid, (x,y), size)
+
+        elif shape == "diamond":
+            plot_diamond(grid, (x,y), size)
+        
+        elif shape == "rhombus":
+            h = random.randint(2, 6)
+            w = random.randint(3, 6)
+            plot_rhombus(grid, (x,y), h , w)
+
+        elif shape == "grid":
+            h = random.randint(3,6)
+            w = random.randint(3,6)
+            if x + h < size and y + w < size:
+                grid[x:x+h, y:y+w] = 1
+        
+        if used_centers is not None: 
+            used_centers.add((x,y))
     return True
 
 # ========== MAP GENERATOR ==========
@@ -100,10 +108,14 @@ def grid_map(map_id=1, size=50):
     
     elif map_id == 2:
         #Scenario 2 - Random Gridmap
-        obstacle = 10 
+        used_centers = set()
+        obstacle = 10
         placed = 0 
-        while placed < obstacle:
-            if random_obstacles(grid, default_start, default_goal, size=size):
+        while placed <= obstacle:
+            if random_obstacles(grid, default_start, default_goal, 
+                                size=size, 
+                                used_centers=used_centers, 
+                                min_distance=5):
                 placed += 1
        
 
@@ -156,7 +168,6 @@ def create_grid_map(grid: np.ndarray, path=None):
     plt.show()
 
 if __name__ == "__main__":
-    for i in range(1, 5):
-        print(f"Displaying Map {i}")
-        grid = grid_map(map_id=i)
-        create_grid_map(grid)
+    print(f"Displaying Map {2}")
+    grid = grid_map(map_id=2)
+    create_grid_map(grid)
