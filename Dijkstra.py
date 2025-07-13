@@ -14,4 +14,7 @@ def Dijkstra(grid, start, goal):
     pq = [(0, start)]
 
     while pq:
+        cost, current = heapq.heappop(pq)
+        
+
         
