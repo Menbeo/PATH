@@ -88,7 +88,7 @@ def convert_grid_to_lat_lon(x_grid: int, y_grid: int) -> tuple[float, float]:
 #===== SCENARIOS 2: RANDOM OBSTACLES ======
 
 def random_obstacles(grid, start, goal, size = 50, used_centers = None):
-    #from start and goal - may overlap - 5 cells 
+    #from start and goal - may overlap - 8 cells 
     for _ in range(300): #loop attempts - 200 times 
         x,y = random.randint(0, size - 1), random.randint(0, size-1)
     
