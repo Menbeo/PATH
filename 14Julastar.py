@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import random
 from matplotlib.path import Path
 import heapq
-
+from convert_to_waypoints import export_waypoints
+from gridmap import convert_grid_to_lat_lon
 # ========== CONFIGURATION ==========
 original_latitude = 10.9288327400429
 original_longitude = 106.796797513962
@@ -298,15 +299,19 @@ def create_grid_map(grid, path=None):
 
 # ========== MAIN ==========
 if __name__ == "__main__":
-    map_id = 2
-    print(f"Displaying Map {map_id}")
-    grid = grid_map(map_id=map_id)
-    path = astar(grid, default_start, default_goal)
-    if path:
-        print(f"Original path length: {len(path)}")
-        simplified_path = simplify_path(grid, path)
-        print(f"Simplified path length: {len(simplified_path)}")
-        create_grid_map(grid, simplified_path)
-    else:
-        print("No path found.")
-        create_grid_map(grid)
+    for map_id in range(1,5):
+        print(f"Displaying Map {map_id}")
+        grid = grid_map(map_id=map_id)
+        path = astar(grid, default_start, default_goal)
+        if path:
+            print(f"Original path length: {len(path)}")
+            simplified_path = simplify_path(grid, path)
+            print(f"Simplified path length: {len(simplified_path)}")
+
+            create_grid_map(grid, simplified_path)
+            lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in simplified_path]
+            filename = f"A_star{map_id}.waypoints"
+            export_waypoints(lat_lon_path, filename=filename)
+        else:
+            print("No path found.")
+            create_grid_map(grid)
