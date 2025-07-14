@@ -1,5 +1,5 @@
 import numpy as np
-def export_waypoints(lat_lon_path: list[tuple[float,float]], filename  = "Dijkstra.waypoints", default_altitude=1000):
+def export_waypoints(lat_lon_path: list[tuple[float,float]], filename  = "Dijkstra.waypoints", default_altitude=2000):
     num_original_waypoints = len(lat_lon_path)
     num_export_waypoints = min(num_original_waypoints, 12)
     if num_export_waypoints > 1:
