@@ -2,37 +2,11 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 import random
+import matplotlib.path as Path 
+from gridmap import create_grid_map, grid_map, default_goal,default_start
+from gridmap import convert_grid_to_lat_lon,compute_neighborhood_layers
 
-# ========== CONFIGURATION ==========
-grid_size = 50
-default_start = (2, 2)
-default_goal = (47, 47)
-
-# ========== OBSTACLE GENERATION ==========
-def plot_circle(grid, center, radius):
-    x_c, y_c = center
-    for x in range(max(0, x_c - radius), min(grid.shape[0], x_c + radius + 1)):
-        for y in range(max(0, y_c - radius), min(grid.shape[1], y_c + radius + 1)):
-            if (x - x_c)**2 + (y - y_c)**2 <= radius**2:
-                grid[x, y] = 1
-
-def random_obstacles(grid, start, goal):
-    centers = set()
-    for _ in range(10):
-        while True:
-            x, y = random.randint(0, grid_size - 1), random.randint(0, grid_size - 1)
-            if (math.hypot(x - start[0], y - start[1]) > 8 and 
-                math.hypot(x - goal[0], y - goal[1]) > 8 and
-                all(math.hypot(x - xc, y - yc) > 8 for xc, yc in centers)):
-                plot_circle(grid, (x, y), random.randint(2, 4))
-                centers.add((x, y))
-                break
-
-def grid_map():
-    grid = np.zeros((grid_size, grid_size))
-    random_obstacles(grid, default_start, default_goal)
-    return grid
-
+from convert_to_waypoints import export_waypoints
 # ========== PATH SIMPLIFICATION ==========
 def bresenham_line(x0, y0, x1, y1):
     points = []
@@ -72,7 +46,6 @@ def simplify_path(grid, path):
             if i < len(path):
                 simplified.append(path[i])
     return simplified
-
 # ========== RRT PATHFINDING ==========
 def nearest_node(nodes, point):
     return min(nodes, key=lambda node: math.hypot(node[0] - point[0], node[1] - point[1]))
@@ -95,7 +68,7 @@ def rrt(grid, start, goal, max_iter=3000, step_size=2.0, goal_sample_rate=0.1):
     parents = {start: None}
     for _ in range(max_iter):
         rand_point = goal if random.random() < goal_sample_rate else (
-            random.uniform(0, grid_size), random.uniform(0, grid_size))
+            random.uniform(0, 50), random.uniform(0, 50))
         nearest = nearest_node(nodes, rand_point)
         new_point = steer(nearest, rand_point, step_size)
         if is_collision_free(grid, nearest, new_point):
@@ -113,28 +86,22 @@ def rrt(grid, start, goal, max_iter=3000, step_size=2.0, goal_sample_rate=0.1):
                     return path[::-1]
     return None
 
-# ========== VISUALIZATION ==========
-def create_grid_map(grid, path=None):
-    plt.figure(figsize=(6, 6))
-    plt.imshow(grid, cmap='gray_r', origin='upper', extent=[0, grid_size, grid_size, 0])
-    if path:
-        px, py = zip(*path)
-        plt.plot(py, px, 'b-', lw=2, label='Path')
-    plt.plot(default_start[1], default_start[0], 'go', ms=8, label='Start')
-    plt.plot(default_goal[1], default_goal[0], 'ro', ms=8, label='Goal')
-    plt.grid(True)
-    plt.legend()
-    plt.show()
+
 
 # ========== MAIN ==========
 if __name__ == "__main__":
-    grid = grid_map()
-    path = rrt(grid, default_start, default_goal)
-    if path:
-        print(f"Original path length: {len(path)}")
-        simplified_path = simplify_path(grid, path)
-        print(f"Simplified path length: {len(simplified_path)}")
-        create_grid_map(grid, simplified_path)
-    else:
-        print("No path found.")
-        create_grid_map(grid)
+    for map_id in range(1,5):
+
+        grid = grid_map(map_id=map_id)
+        path = rrt(grid, default_start, default_goal)
+        if path:
+            print(f"Original path length: {len(path)}")
+            simplified_path = simplify_path(grid, path)
+            print(f"Simplified path length: {len(simplified_path)}")
+            create_grid_map(grid, simplified_path)
+            lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in simplified_path]
+            filename = f"RRT{map_id}.waypoints"
+            export_waypoints(lat_lon_path, filename=filename)
+        else:
+            print("No path found.")
+            create_grid_map(grid)
