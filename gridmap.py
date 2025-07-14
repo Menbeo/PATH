@@ -230,22 +230,83 @@ def grid_map(map_id=1, size=50):
 
     return grid
 
+# ===== COMPUTE BOUNDARIES FOR OBSTACLE ===
+def compute_neighborhood_layers(grid, max_layer=3):
+    from collections import deque
+
+    visited = np.zeros_like(grid, dtype=bool)
+    layers = np.zeros_like(grid, dtype=int)  # 0 = obstacle or not in neighborhood
+
+    rows, cols = grid.shape
+    queue = deque()
+
+    # Start from all obstacle cells
+    for x in range(rows):
+        for y in range(cols):
+            if grid[x, y] == 1:
+                visited[x, y] = True
+                layers[x, y] = 0  # obstacle
+                queue.append((x, y, 0))
+
+    # BFS to expand up to max_layer
+    while queue:
+        x, y, dist = queue.popleft()
+        if dist >= max_layer:
+            continue
+        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < rows and 0 <= ny < cols and not visited[nx, ny]:
+                if grid[nx, ny] == 0:  # free space
+                    visited[nx, ny] = True
+                    layers[nx, ny] = dist + 1
+                    queue.append((nx, ny, dist + 1))
+    return layers
+
+
 # ===== CREATE GRID MAP ==== 
 def create_grid_map(grid: np.ndarray, path=None):
+    neighborhood_layers = compute_neighborhood_layers(grid, max_layer=3)
+    # RGB map initialization
+    color_grid = np.ones((*grid.shape, 3))  # default free space: white (1,1,1)
+
+    for x in range(grid.shape[0]):
+        for y in range(grid.shape[1]):
+            if grid[x, y] == 1:
+                color_grid[x, y] = [1.0, 1.0, 0.0]  # obstacle core: Yellow
+            elif neighborhood_layers[x, y] == 1:
+                color_grid[x, y] = [1.0, 0.0, 0.0]  # r1: Red (lethal inflation)
+            elif neighborhood_layers[x, y] == 2:
+                color_grid[x, y] = [0.0, 1.0, 1.0]  # r2: Cyan (security inflation)
+    
     plt.figure(figsize=(10, 10))
     plt.title("Grid Map with Path")
-    plt.imshow(grid, cmap='gray_r', origin='upper', extent=[0, 50, 50, 0])
+    plt.imshow(color_grid, cmap='gray', origin='upper', extent=[0, 50, 50, 0])
     if path:
         path_x, path_y = zip(*path)
         plt.plot(path_y, path_x, color='blue', linewidth=2, label='Path')
     plt.plot(default_start[1], default_start[0], 'go', markersize=10, label='Start')
     plt.plot(default_goal[1], default_goal[0], 'ro', markersize=10, label='Goal')
+    
+    from matplotlib.patches import Patch
+
+    # Custom legend for zones
+    legend_elements = [
+        Patch(facecolor='yellow', edgecolor='black', label='Obstacle'),
+        Patch(facecolor='red', edgecolor='black', label='Dangerous Zone'),
+        Patch(facecolor='cyan', edgecolor='black', label='Safe Zone'),
+        Patch(facecolor='green', label='Start'),
+        Patch(facecolor='red', label='Goal')
+    ]
+
+    # Draw custom legend box
+    plt.legend(handles=legend_elements, loc='upper right', fontsize=9, frameon=True, borderpad=1)
+
     plt.xticks(np.arange(0, 55, 5))
     plt.yticks(np.arange(0, 55, 5))
     plt.xlim(0, 50)
     plt.gca().set_aspect('equal')
     plt.grid(True)
-    plt.legend()
+    
     plt.show()
 
 
