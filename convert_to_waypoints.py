@@ -1,7 +1,7 @@
 import numpy as np
-def export_waypoints(lat_lon_path: list[tuple[float,float]], filename  = "Dijkstra.waypoints", default_altitude=2000):
+def export_waypoints(lat_lon_path: list[tuple[float,float]], filename  = "Dijkstra.waypoints", default_altitude=2000): #Altitude of each waypoints is 2000
     num_original_waypoints = len(lat_lon_path)
-    num_export_waypoints = min(num_original_waypoints, 12)
+    num_export_waypoints = min(num_original_waypoints, 12) #Limit to 12 waypoints
     if num_export_waypoints > 1:
         indices_to_export = np.linspace(0, num_original_waypoints - 1, num_export_waypoints, dtype=int)
     else: # If only one waypoint, take the first one
