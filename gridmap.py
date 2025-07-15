@@ -5,6 +5,7 @@ import random
 from matplotlib.path import Path
 
 
+
 # ========== CONFIGURATION ==========
 original_latitude = 10.9288327400429
 original_longitude = 106.796797513962

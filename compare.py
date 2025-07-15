@@ -4,7 +4,7 @@ import numpy as np
 from gridmap import grid_map, create_grid_map, default_start, default_goal
 
 # Import algorithms
-from Dijkstra import dijkstra
+from Dijkstra import Dijkstra
 from probalisitc_road_map import sample_points, connect_nodes, dijkstra as prm_dijkstra
 from PSO import fitness_function as pso_fitness_function  # Avoid re-running global PSO
 import matplotlib.pyplot as plt
@@ -20,7 +20,7 @@ grid = grid_map()
 
 # === Dijkstra ===
 start_time = time.time()
-path_dijkstra = dijkstra(default_start, default_goal, grid)
+path_dijkstra = Dijkstra(default_start, default_goal, grid)
 time_dijkstra = time.time() - start_time
 length_dijkstra = compute_path_length(path_dijkstra)
 

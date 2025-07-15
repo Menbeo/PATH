@@ -77,7 +77,7 @@ def fitness_function(particle, grid):
 particles = np.random.randint(0, rows, (POP_SIZE, NUM_WAYPOINTS * 2))
 velocities = np.zeros_like(particles)
 personal_best = particles.copy()
-personal_best_scores = np.array([fitness_function(p) for p in particles])
+personal_best_scores = np.array([fitness_function(p,grid) for p in particles])
 global_best = personal_best[np.argmin(personal_best_scores)]
 
 for iter in range(MAX_ITER):
