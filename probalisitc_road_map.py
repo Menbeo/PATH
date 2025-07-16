@@ -6,14 +6,10 @@ import random
 import math 
 import networkx as nx 
 
-inflation = compute_neighborhood_layers(grid, max_layer=3)
-
 def is_free(x, y, grid):
     x = int(x)
     y = int(y)
-    if 0 <= x < grid.shape[0] and 0 <= y < grid.shape[1] and grid[x, y] == 0:
-        return False
-    
+    return 0 <= x < grid.shape[0] and 0 <= y < grid.shape[1] and grid[x, y] == 0
 
 def line_free(p1, p2, grid):
     steps = int(max(abs(p1[0]-p2[0]), abs(p1[1]-p2[1]))) + 1
@@ -49,7 +45,7 @@ def dijkstra(graph, start_idx,  goal_idx):
     prev = {}
     dist[start_idx] = 0
     visited = set()
-
+    inflation = compute_neighborhood_layers(grid, max_layer=3)
     while True:
         current = None
         min_dist = float('inf')
@@ -64,7 +60,17 @@ def dijkstra(graph, start_idx,  goal_idx):
         for neighbor, weight in graph[current]:
             if neighbor in visited:
                 continue
-            new_dist = dist[current] + weight 
+            x, y = samples[neighbor]
+            layer = inflation[int(x), int(y)]
+
+            if layer == 1:
+                layer_cost = 1000
+            elif layer == 2:
+                layer_cost = 2
+            else:
+                layer_cost = 1
+
+            new_dist = dist[current] + weight * layer_cost
             if new_dist < dist[neighbor]:
                 dist[neighbor] = new_dist
                 prev[neighbor] = current
