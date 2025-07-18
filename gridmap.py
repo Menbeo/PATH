@@ -232,41 +232,27 @@ def grid_map(map_id=1, size=50):
     return grid
 
 # ===== COMPUTE BOUNDARIES FOR OBSTACLE ===
-def compute_neighborhood_layers(grid, max_layer=3):
-    from collections import deque
-
-    visited = np.zeros_like(grid, dtype=bool)
-    layers = np.zeros_like(grid, dtype=int)  # 0 = obstacle or not in neighborhood
-
+def compute_neighborhood_layers(grid, inflation_radius=1.8, meters_per_cell=1.0):
     rows, cols = grid.shape
-    queue = deque()
+    inflated_grid = np.zeros_like(grid)
+    
+    inflation_cells = int(np.ceil(inflation_radius / meters_per_cell))
 
-    # Start from all obstacle cells
     for x in range(rows):
         for y in range(cols):
-            if grid[x, y] == 1:
-                visited[x, y] = True
-                layers[x, y] = 0  # obstacle
-                queue.append((x, y, 0))
-
-    # BFS to expand up to max_layer
-    while queue:
-        x, y, dist = queue.popleft()
-        if dist >= max_layer:
-            continue
-        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < rows and 0 <= ny < cols and not visited[nx, ny]:
-                if grid[nx, ny] == 0:  # free space
-                    visited[nx, ny] = True
-                    layers[nx, ny] = dist + 1
-                    queue.append((nx, ny, dist + 1))
-    return layers
-
+            if grid[x, y] == 1:  # Obstacle cell
+                for dx in range(-inflation_cells, inflation_cells + 1):
+                    for dy in range(-inflation_cells, inflation_cells + 1):
+                        nx, ny = x + dx, y + dy
+                        if 0 <= nx < rows and 0 <= ny < cols:
+                            distance = np.sqrt(dx**2 + dy**2)
+                            if distance <= inflation_radius:
+                                inflated_grid[nx, ny] = 1  # Mark as inflated (dangerous) zone
+    return inflated_grid
 
 # ===== CREATE GRID MAP ==== 
 def create_grid_map(grid: np.ndarray, path=None):
-    neighborhood_layers = compute_neighborhood_layers(grid, max_layer=3)
+    neighborhood_layers = compute_neighborhood_layers(grid)
     # RGB map initialization
     color_grid = np.ones((*grid.shape, 3))  # default free space: white (1,1,1)
 
@@ -274,10 +260,10 @@ def create_grid_map(grid: np.ndarray, path=None):
         for y in range(grid.shape[1]):
             if grid[x, y] == 1:
                 color_grid[x, y] = [1.0, 1.0, 0.0]  # obstacle core: Yellow
-            elif neighborhood_layers[x, y] == 1:
-                color_grid[x, y] = [1.0, 0.0, 0.0]  # r1: Red (lethal inflation)
-            elif neighborhood_layers[x, y] == 2:
-                color_grid[x, y] = [0.0, 1.0, 1.0]  # r2: Cyan (security inflation)
+            elif neighborhood_layers[x, y] >= 1:
+                color_grid[x, y] = [1.0, 0.0, 0.0]  # r2: red (dangerous inflation)
+            else:
+                color_grid[x, y] = [1.0, 1.0, 1.0]
     
     plt.figure(figsize=(10, 10))
     plt.title("Grid Map with Path")
@@ -294,7 +280,6 @@ def create_grid_map(grid: np.ndarray, path=None):
     legend_elements = [
         Patch(facecolor='yellow', edgecolor='black', label='Obstacle'),
         Patch(facecolor='red', edgecolor='black', label='Dangerous Zone'),
-        Patch(facecolor='cyan', edgecolor='black', label='Safe Zone'),
         Patch(facecolor='green', label='Start'),
         Patch(facecolor='red', label='Goal')
     ]

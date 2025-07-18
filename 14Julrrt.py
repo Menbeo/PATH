@@ -57,13 +57,14 @@ def steer(from_node, to_point, step_size):
         return to_point
     return (from_node[0] + dx * step_size / dist, from_node[1] + dy * step_size / dist)
 
-def is_collision_free(grid, point1, point2):
+def is_collision_free(inflation, point1, point2):
     for x, y in bresenham_line(int(point1[0]), int(point1[1]), int(point2[0]), int(point2[1])):
-        if not (0 <= x < grid.shape[0] and 0 <= y < grid.shape[1]) or grid[x, y] == 1:
-            return False
+        # if not (0 <= x < grid.shape[0] and 0 <= y < grid.shape[1]) or grid[x, y] == 1:
+        if inflation[x, y] == 9 or inflation[x, y] == 1:
+                return False
     return True
 
-def rrt(grid, start, goal, max_iter=3000, step_size=2.0, goal_sample_rate=0.1):
+def rrt(grid, inflation, start, goal, max_iter=3000, step_size=2.0, goal_sample_rate=0.1):
     nodes = [start]
     parents = {start: None}
     for _ in range(max_iter):
@@ -71,7 +72,7 @@ def rrt(grid, start, goal, max_iter=3000, step_size=2.0, goal_sample_rate=0.1):
             random.uniform(0, 50), random.uniform(0, 50))
         nearest = nearest_node(nodes, rand_point)
         new_point = steer(nearest, rand_point, step_size)
-        if is_collision_free(grid, nearest, new_point):
+        if is_collision_free(inflation, nearest, new_point):
             nodes.append(new_point)
             parents[new_point] = nearest
             if math.hypot(new_point[0] - goal[0], new_point[1] - goal[1]) <= step_size:
@@ -93,13 +94,13 @@ if __name__ == "__main__":
     for map_id in range(1,5):
 
         grid = grid_map(map_id=map_id)
-        path = rrt(grid, default_start, default_goal)
+        inflation = compute_neighborhood_layers(grid)
+        path = rrt(grid, inflation, default_start, default_goal)
         if path:
             print(f"Original path length: {len(path)}")
-            simplified_path = simplify_path(grid, path)
-            print(f"Simplified path length: {len(simplified_path)}")
-            create_grid_map(grid, simplified_path)
-            lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in simplified_path]
+            # simplify_pathhe = simplify_path(grid,path)
+            create_grid_map(grid, path)
+            lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in path]
             filename = f"RRT{map_id}.waypoints"
             export_waypoints(lat_lon_path, filename=filename)
         else:

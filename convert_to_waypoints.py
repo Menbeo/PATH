@@ -7,7 +7,7 @@ def export_waypoints(lat_lon_path: list[tuple[float,float]], filename  = "Dijkst
     else: # If only one waypoint, take the first one
         indices_to_export = [0] if num_original_waypoints > 0 else []
     # Filter the path to include only the selected waypoints
-    sampled_lat_lon_path = [lat_lon_path[i] for i in indices_to_export]
+    sampled_lat_lon_path =[lat_lon_path[i] for i in indices_to_export]
     with open(filename, 'w') as f:
         f.write("QGC WPL 110 \n")
         for i, (lat,lon) in enumerate(sampled_lat_lon_path):
