@@ -1,205 +1,169 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import math
+import matplotlib.pyplot as plt
+import numpy as np
 import random
-from gridmap import grid_map, create_grid_map, default_start, default_goal
-from gridmap import compute_neighborhood_layers, convert_grid_to_lat_lon
+from matplotlib.path import Path
+from matplotlib.patches import Patch # For custom legend elements
+from gridmap import create_grid_map, grid_map, default_goal,default_start
+from gridmap import convert_grid_to_lat_lon,compute_neighborhood_layers
+from convert_to_waypoints import export_waypoints
+import math
+import matplotlib.pyplot as plt
+import numpy as np
+import random
+from matplotlib.path import Path
+from matplotlib.patches import Patch
+from gridmap import create_grid_map, grid_map, default_goal, default_start
+from gridmap import convert_grid_to_lat_lon, compute_neighborhood_layers
 from convert_to_waypoints import export_waypoints
 
-# PSO Parameters
-POP_SIZE = 50
-MAX_ITER = 200
-NUM_WAYPOINTS = 12
-INERTIA = 0.5
-C1 = 1.5
-C2 = 1.5
-V_MAX = 5
-# PENALTY = 1e6 # This parameter is not used, can be removed
+# --- PSO Parameters ---
+DIMENSIONS = 2
+GRID_SIZE = 50
+B_LO = 0
+B_HI = GRID_SIZE - 1
+POPULATION = 150
+V_MAX = 3.0
+PERSONAL_C = 2.0
+SOCIAL_C = 2.0
+CONVERGENCE_DISTANCE = 0.5
+MAX_ITER = 500
+
+def cost_function_grid(x, y, grid_data, neighborhood_layers_data, goal_pos):
+    rows, cols = grid_data.shape
+    x_int, y_int = int(round(x)), int(round(y))
+
+    if not (0 <= x_int < rows and 0 <= y_int < cols):
+        return float('inf')
+
+    cost = 0.0
+    if grid_data[x_int, y_int] == 1:
+        cost += 1_000_000
+    elif neighborhood_layers_data[x_int, y_int] == 1:
+        cost += 50_000
+
+    distance_to_goal = np.sqrt((x - goal_pos[0])**2 + (y - goal_pos[1])**2)
+    cost += distance_to_goal * 100
+    return cost
 
 class Particle:
-    def __init__(self, position, velocity, grid, inflation):
-        self.position = position
-        self.velocity = velocity
-        self.best_position = position.copy()
-        self.best_score = float('inf')
-        self.grid = grid
-        self.inflation = inflation
-        # Initialize best score with current position
-        self.best_score = self.fitness_function(position)
+    def __init__(self, x_init, y_init, velocity_init):
+        self.pos = np.array([x_init, y_init], dtype=float)
+        self.velocity = np.array(velocity_init, dtype=float)
+        self.best_pos = self.pos.copy()
+        self.best_pos_cost = float('inf')
+        self.personal_path = [self.pos.copy()]
 
-    def fitness_function(self, waypoints_flattened):
-        """Evaluate the fitness of a particle's solution"""
-        # Ensure waypoints are within grid boundaries before reshaping
-        # This clip is already done in particle_swarm_optimization, but good to ensure here too if this method is called independently
-        waypoints_clipped = np.clip(waypoints_flattened, 0, self.grid.shape[0]-1)
-        waypoints = [default_start] + list(waypoints_clipped.reshape(-1, 2)) + [default_goal]
-        
-        # 1. Path length cost
-        path_length = sum(np.linalg.norm(np.array(waypoints[i])-np.array(waypoints[i-1])) 
-                         for i in range(1, len(waypoints)))
-        
-        # 2. Collision penalty
-        if not self.is_collision_free(waypoints):
-            return float('inf')
-        
-        # 3. Proximity penalty
-        proximity_cost = 0
-        for wp in waypoints:
-            x, y = int(round(wp[0])), int(round(wp[1]))
-            if 0 <= x < self.grid.shape[0] and 0 <= y < self.grid.shape[1]:
-                if self.inflation[x, y] == 1:
-                    proximity_cost += 500 # High penalty for being in inflated zone
-                elif self.inflation[x, y] == 0:
-                    # Penalty for being close to obstacles even if not in inflated zone
-                    for di in range(-3, 4): # Check 7x7 neighborhood
-                        for dj in range(-3, 4):
-                            xi, yj = x+di, y+dj
-                            if (0 <= xi < self.grid.shape[0] and 0 <= yj < self.grid.shape[1] 
-                                and self.grid[xi, yj] == 1): # Check for actual obstacles
-                                # Inverse square law for distance, add a small epsilon to avoid division by zero
-                                distance_sq = di**2 + dj**2
-                                if distance_sq == 0: # If it's the obstacle itself (should be caught by inflation[x,y]==1)
-                                    proximity_cost += 1000 # Very high penalty
-                                else:
-                                    proximity_cost += 50.0 / distance_sq
-        
-        return path_length + 10 * proximity_cost
+    def update_position(self, new_pos):
+        self.pos = new_pos
+        self.personal_path.append(self.pos.copy())
 
-    def is_collision_free(self, path, margin=0):
-        """Check if path avoids obstacles using Bresenham's line algorithm with an optional margin."""
-        for i in range(1, len(path)):
-            x0, y0 = int(round(path[i-1][0])), int(round(path[i-1][1]))
-            x1, y1 = int(round(path[i][0])), int(round(path[i][1]))
-            
-            dx = abs(x1 - x0)
-            dy = -abs(y1 - y0) # Using negative dy for Bresenham's initial error setup
-            sx = 1 if x0 < x1 else -1
-            sy = 1 if y0 < y1 else -1
-            err = dx + dy
-            
-            current_x, current_y = x0, y0 # Initialize current point for Bresenham's loop
-            
-            while True:
-                # Check current cell and its margin for collision
-                for di in range(-margin, margin + 1):
-                    for dj in range(-margin, margin + 1):
-                        check_x, check_y = current_x + di, current_y + dj
-                        if (0 <= check_x < self.grid.shape[0] and 0 <= check_y < self.grid.shape[1]):
-                            if self.grid[check_x, check_y] == 1 or self.inflation[check_x, check_y] == 1:
-                                return False
-                
-                if current_x == x1 and current_y == y1:
-                    break # Reached the end point
-                
-                e2 = 2 * err
-                if e2 >= dy: # Move in x direction
-                    err += dy
-                    current_x += sx
-                if e2 <= dx: # Move in y direction
-                    err += dx
-                    current_y += sy
-        return True
+    def update_best_pos(self, current_cost):
+        if current_cost < self.best_pos_cost:
+            self.best_pos = self.pos.copy()
+            self.best_pos_cost = current_cost
 
 class Swarm:
-    def __init__(self, grid, inflation, pop_size=POP_SIZE):
-        self.grid = grid
-        self.inflation = inflation
+    def __init__(self, pop_size, v_max_limit, grid_data, neighborhood_layers_data, goal_pos, start_pos):
         self.particles = []
-        self.global_best_position = None
-        self.global_best_score = float('inf')
-        
-        rows, cols = grid.shape
-        for i in range(pop_size):
-            # Randomly initialize waypoints within the grid boundaries
-            position = np.random.randint(0, rows, NUM_WAYPOINTS * 2) # Waypoints are (x,y) pairs, so *2
-            velocity = np.random.uniform(-V_MAX, V_MAX, NUM_WAYPOINTS * 2)
-            
-            particle = Particle(position, velocity, grid, inflation)
+        self.global_best_pos = None
+        self.global_best_pos_cost = float('inf')
+        self.global_best_path = []
+
+        for _ in range(pop_size):
+            x = start_pos[0] + np.random.uniform(-1, 1)
+            y = start_pos[1] + np.random.uniform(-1, 1)
+            x_int, y_int = int(round(x)), int(round(y))
+
+            while (not (0 <= x_int < GRID_SIZE and 0 <= y_int < GRID_SIZE)) or grid_data[x_int, y_int] == 1:
+                x = start_pos[0] + np.random.uniform(-1, 1)
+                y = start_pos[1] + np.random.uniform(-1, 1)
+                x_int, y_int = int(round(x)), int(round(y))
+
+            velocity = np.random.uniform(-v_max_limit, v_max_limit, DIMENSIONS)
+            particle = Particle(x, y, velocity)
+            current_cost = cost_function_grid(x, y, grid_data, neighborhood_layers_data, goal_pos)
+            particle.update_best_pos(current_cost)
             self.particles.append(particle)
-            
-            # Initialize global best with the first particle, or if a better particle is found
-            if i == 0 or particle.best_score < self.global_best_score:
-                self.global_best_score = particle.best_score
-                self.global_best_position = particle.best_position.copy() # Ensure it's a copy
 
-def particle_swarm_optimization(grid, inflation):
-    """Main PSO optimization routine"""
-    swarm = Swarm(grid, inflation)
-    rows, cols = grid.shape
-    
-    for iteration in range(MAX_ITER):
+            if particle.best_pos_cost < self.global_best_pos_cost:
+                self.global_best_pos = particle.best_pos.copy()
+                self.global_best_pos_cost = particle.best_pos_cost
+                self.global_best_path = particle.personal_path.copy()
+
+def particle_swarm_optimization(map_id, show_plot=False):
+    grid = grid_map(map_id=map_id, size=GRID_SIZE)
+    neighborhood_layers = compute_neighborhood_layers(grid)
+    swarm = Swarm(POPULATION, V_MAX, grid, neighborhood_layers, default_goal, default_start)
+
+    for curr_iter in range(MAX_ITER):
         for particle in swarm.particles:
-            # Update velocity
-            r1 = np.random.rand(NUM_WAYPOINTS * 2) # Random numbers for cognitive component
-            r2 = np.random.rand(NUM_WAYPOINTS * 2) # Random numbers for social component
-            
-            cognitive = C1 * r1 * (particle.best_position - particle.position)
-            social = C2 * r2 * (swarm.global_best_position - particle.position)
-            particle.velocity = INERTIA * particle.velocity + cognitive + social
-            
-            # Clip velocity to V_MAX
-            particle.velocity = np.clip(particle.velocity, -V_MAX, V_MAX)
-            
-            # Update position
-            particle.position = particle.position + particle.velocity
-            
-            # Clip position to stay within grid boundaries and convert to int
-            particle.position = np.clip(particle.position, 0, rows-1).astype(int)
-            
-            # Evaluate fitness
-            current_score = particle.fitness_function(particle.position)
-            
-            # Update personal best
-            if current_score < particle.best_score:
-                particle.best_score = current_score
-                particle.best_position = particle.position.copy()
-                
-                # Update global best
-                if current_score < swarm.global_best_score:
-                    swarm.global_best_score = current_score
-                    swarm.global_best_position = particle.position.copy()
-        
-        if iteration % 10 == 0:
-            print(f"Iteration {iteration:3d}, Best Score: {swarm.global_best_score:.2f}")
-    
-    # After MAX_ITER, return the best path found
-    return swarm.global_best_position
+            r1 = np.random.uniform(0, 1, DIMENSIONS)
+            r2 = np.random.uniform(0, 1, DIMENSIONS)
+            inertia_weight = 0.9 - ((0.7 / MAX_ITER) * curr_iter)
 
-def main():
-    """Main function to run PSO path planning"""
-    for map_id in range(1, 5):
-        print(f"\nProcessing Map {map_id}...")
-        grid = grid_map(map_id=map_id)
-        # Compute inflation layer for collision and proximity checking
-        inflation = compute_neighborhood_layers(grid) 
-        
-        best_waypoints_flattened = particle_swarm_optimization(grid, inflation)
-        
-        # Reshape the flattened waypoints and add start/goal
-        # Ensure the waypoints are still within bounds after optimization
-        if best_waypoints_flattened is None:
-            print(f"No valid path found for Map {map_id}. Skipping waypoint export and visualization.")
-            continue
+            personal_term = PERSONAL_C * r1 * (particle.best_pos - particle.pos)
+            social_term = SOCIAL_C * r2 * (swarm.global_best_pos - particle.pos)
 
-        best_waypoints_clipped = np.clip(best_waypoints_flattened, 0, grid.shape[0]-1)
-        waypoints_grid_coords = [default_start] + list(best_waypoints_clipped.reshape(-1, 2)) + [default_goal]
-        
-        # Convert grid coordinates to (int, int) tuples for plotting and clarity
-        path_for_plot = [(int(p[0]), int(p[1])) for p in waypoints_grid_coords]
-        
-        # Convert grid coordinates to latitude and longitude for export
-        # Note: convert_grid_to_lat_lon expects (y_grid, x_grid) for (latitude, longitude) conversion
-        # but your path is (x_grid, y_grid). So we swap them here.
-        # This aligns with how `convert_grid_to_lat_lon` is designed (y_grid for lat, x_grid for lon)
-        lat_lon_path = [
-            convert_grid_to_lat_lon(point_y, point_x) for point_x, point_y in path_for_plot
-        ]
-        
-        filename = f"PSO_Map{map_id}.waypoints"
-        export_waypoints(lat_lon_path, filename=filename, default_altitude=100) # Use 100 as altitude
-        
-        create_grid_map(grid, path_for_plot) # Pass the path in grid coordinates
-        print(f"Map {map_id} completed. Waypoints saved to {filename}")
+            new_velocity = inertia_weight * particle.velocity + personal_term + social_term
+            new_velocity = np.clip(new_velocity, -V_MAX, V_MAX)
+            particle.velocity = new_velocity
 
+            new_pos = particle.pos + particle.velocity
+            new_pos = np.clip(new_pos, B_LO, B_HI)
+            particle.update_position(new_pos)
+
+            current_cost = cost_function_grid(
+                particle.pos[0], particle.pos[1], grid, neighborhood_layers, default_goal
+            )
+            particle.update_best_pos(current_cost)
+
+            if particle.best_pos_cost < swarm.global_best_pos_cost:
+                swarm.global_best_pos = particle.best_pos.copy()
+                swarm.global_best_pos_cost = particle.best_pos_cost
+                swarm.global_best_path = particle.personal_path.copy()
+
+        dist = np.linalg.norm(swarm.global_best_pos - np.array(default_goal))
+        if dist < CONVERGENCE_DISTANCE and swarm.global_best_pos_cost < 1000:
+            print(f"PSO converged on map {map_id} at iteration {curr_iter + 1}")
+            break
+
+    # Convert to integer path
+    int_path = [(int(round(p[0])), int(round(p[1]))) for p in swarm.global_best_path]
+
+    # Export waypoints
+    latlon_path = [convert_grid_to_lat_lon(x, y) for x, y in int_path]
+    export_waypoints(latlon_path, filename=f"PSO_map{map_id}.waypoints")
+
+    # Optional plot
+    if show_plot:
+        plt.figure(figsize=(6, 6))
+        color_grid = np.ones((*grid.shape, 3))
+        for x in range(grid.shape[0]):
+            for y in range(grid.shape[1]):
+                if grid[x, y] == 1:
+                    color_grid[x, y] = [1, 1, 0]  # Obstacle: Yellow
+                elif neighborhood_layers[x, y] >= 1:
+                    color_grid[x, y] = [1, 0, 0]  # Danger: Red
+                else:
+                    color_grid[x, y] = [1, 1, 1]  # Free: White
+        plt.imshow(color_grid, origin='upper')
+
+        if len(int_path) > 1:
+            px = [p[1] for p in int_path]
+            py = [p[0] for p in int_path]
+            plt.plot(px, py, color='blue', label='PSO Path', linewidth=2)
+
+        plt.plot(default_start[1], default_start[0], 'go', label='Start')
+        plt.plot(default_goal[1], default_goal[0], 'ro', label='Goal')
+        plt.title(f"PSO - Map {map_id}")
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    return int_path
+
+# --- Main Execution ---
 if __name__ == "__main__":
-    main()
+    for i in range(1,5):
+        particle_swarm_optimization(map_id=i)
