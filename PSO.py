@@ -8,32 +8,23 @@ from convert_to_waypoints import export_waypoints
 
 # Configuration
 NUM_WAYPOINTS = 10
-NUM_PARTICLES = 200
+NUM_PARTICLES = 150
 NUM_ITERATIONS = 500
 W = 0.5   # Inertia
 C1 = 2.0  # Cognitive
-C2 = 1.5  # Social
-V_MAX = 1.0
-
-
-
+C2 = 2.0  # Social
+V_MAX = 0.5
 # Evaluate entire path cost
 def path_cost(path, grid, inflated_grid):
     total_cost = 0
     for i in range(1, len(path)):
+        x, y = path[i]
+        if grid[x, y] == 1:
+            total_cost += 1_000_000
+        elif inflated_grid[x, y] == 1:
+            total_cost += 50_000
         dist = math.hypot(path[i][0] - path[i-1][0], path[i][1] - path[i-1][1])
         total_cost += dist
-        x, y = int(round(path[i][0])), int(round(path[i][1]))
-        if grid[x, y] == 1:
-            total_cost += 1000
-        elif inflated_grid[x, y] >= 1:
-            total_cost += 10000
-        if i > 1:
-            v1_x, v1_y = path[i-1][0] - path[i-2][0], path[i-1][1] - path[i-2][1]
-            v2_x, v2_y = path[i][0] - path[i-1][0], path[i][1] - path[i-1][1]
-            cos_angle = (v1_x * v2_x + v1_y * v2_y) / (math.hypot(v1_x, v1_y) * math.hypot(v2_x, v2_y) + 1e-6)
-            total_cost += 10 * (1 - cos_angle)
-        
     return total_cost
 
 def clamp(p, grid_shape):
@@ -46,15 +37,13 @@ def initialize_particles(grid):
     velocities = []
     for _ in range(NUM_PARTICLES):
         path = [default_start]
-        for t in range(1, NUM_WAYPOINTS + 1):
-            t = t / (NUM_WAYPOINTS + 1)
-            x = int(default_start[0] + t * (default_goal[0] - default_start[0]) + random.uniform(-5, 5))
-            y = int(default_start[1] + t * (default_goal[1] - default_start[1]) + random.uniform(-5, 5))
-            x, y = clamp((x, y), grid.shape)
-            while grid[x, y] == 1:  # Ensure no obstacle
+        for _ in range(NUM_WAYPOINTS):
+            while True:
                 x = random.randint(0, grid.shape[0] - 1)
                 y = random.randint(0, grid.shape[1] - 1)
-            path.append((x, y))
+                if grid[x, y] == 0:
+                    path.append((x, y))
+                    break
         path.append(default_goal)
         particles.append(path)
         velocities.append([(random.uniform(-V_MAX, V_MAX), random.uniform(-V_MAX, V_MAX)) for _ in range(NUM_WAYPOINTS + 2)])
@@ -78,9 +67,6 @@ def run_pso(grid):
 
                 vx = W * vx + C1 * r1 * (pbest_x - px) + C2 * r2 * (gbest_x - px)
                 vy = W * vy + C1 * r1 * (pbest_y - py) + C2 * r2 * (gbest_y - py)
-                if inflated[int(px), int(py)] >= 1:
-                    vx += random.uniform(-0.5, 0.5) * V_MAX
-                    vy += random.uniform(-0.5, 0.5) * V_MAX
                 vx = max(-V_MAX, min(V_MAX, vx))
                 vy = max(-V_MAX, min(V_MAX, vy))
                 new_pos = clamp((px + vx, py + vy), grid.shape)
