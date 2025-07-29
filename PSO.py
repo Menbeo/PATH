@@ -1,8 +1,10 @@
 import numpy as np
 import random
 import math
+import matplotlib.pyplot as plt
 from gridmap import compute_neighborhood_layers, grid_map, default_goal, default_start
-
+from gridmap import convert_grid_to_lat_lon, create_grid_map
+from convert_to_waypoints import export_waypoints
 # Define objective: distance to goal + penalty for being in obstacle/inflation
 def grid_objective(pos, grid, inflated_grid, goal):
     x, y = pos
@@ -23,7 +25,7 @@ def clamp_position(pos, grid_shape):
     return (x, y)
 
 # Run PSO in grid
-def run_pso(grid, start, goal, n_particles=50, n_iterations=100):
+def run_pso(grid, start, goal, n_particles=300, n_iterations=500):
     inflated_grid = compute_neighborhood_layers(grid)
 
     # Initialize particles
@@ -42,9 +44,9 @@ def run_pso(grid, start, goal, n_particles=50, n_iterations=100):
     global_best = personal_best[np.argmin(personal_best_scores)]
 
     # PSO constants
-    w = 0.5
-    c1 = 1.5
-    c2 = 2.0
+    w = 0.729
+    c1 = 1.49445
+    c2 = 1.49445
 
     # Start PSO
     for it in range(n_iterations):
@@ -77,8 +79,27 @@ def run_pso(grid, start, goal, n_particles=50, n_iterations=100):
 
 if __name__ == "__main__":
     for map_id in range(1,5):
-        grid = grid_map(map_id==map_id)   
+        grid = grid_map(map_id=map_id)   
         start = default_start
         goal = default_goal
+        
         best_path = run_pso(grid, start, goal)
+        
+        best_waypoints_clipped = np.clip(best_path, 0, grid.shape[0]-1)
+        waypoints_grid_coords = [default_start] + list(best_waypoints_clipped.reshape(-1, 2)) + [default_goal]
+        path_for_plot = [(int(p[0]), int(p[1])) for p in waypoints_grid_coords]
+        
+        # Convert to lat/lon and export
+        lat_lon_path = [convert_grid_to_lat_lon(y, x) for x, y in path_for_plot]
+        filename = f"PSO_Map{map_id}.waypoints"
+        export_waypoints(lat_lon_path, filename=filename, default_altitude=100)
+
+        # Visualization with title and save
+        create_grid_map(grid, path_for_plot)
+        plt.title(f"Optimized Path - Map {map_id}")
+        plt.show()
+
+        print(f"Map {map_id} completed. Waypoints saved to {filename}")
+        create_grid_map(grid, best_path)
+        plt.show()
         print(f"Best path found: {best_path}")
