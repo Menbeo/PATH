@@ -26,7 +26,7 @@ def memory_usage_MB():
 
 def record(algorithm, map_id, run_id, path, start_time):
     elapsed_time = time.time() - start_time
-    mem_used = memory_usage_MB() - memory_before
+    # mem_used = memory_usage_MB() - memory_before
     path_len = len(path) if path else 0
 
     csv_writers["length"].writerow([algorithm, map_id, run_id, path_len])
@@ -44,20 +44,20 @@ for map_id in range(1, 5):
         inflation = compute_neighborhood_layers(grid)
 
         # --- Dijkstra ---
-        mem_before = memory_usage_MB()
+        #mem_before = memory_usage_MB()
         start = time.time()
         path = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
         record("Dijkstra", map_id, run_id, path, start)
 
         # --- A* ---
-        mem_before = memory_usage_MB()
+        #mem_before = memory_usage_MB()
         start = time.time()
         path = astar(grid, default_start, default_goal)
         path = simplify_astar(grid, path) if path else []
         record("Astar", map_id, run_id, path, start)
 
         # --- RRT ---
-        mem_before = memory_usage_MB()
+        #mem_before = memory_usage_MB()
         start = time.time()
         path = rrt(grid, inflation, default_start, default_goal)
         path = simplify_rrt(grid, path) if path else []
@@ -71,7 +71,7 @@ for map_id in range(1, 5):
         goal_idx = len(samples) - 1
         graph = connect_nodes(samples, radius=50, grid=grid, inflation=inflation)
 
-        mem_before = memory_usage_MB()
+       # mem_before = memory_usage_MB()
         start = time.time()
         try:
             path_idx, nodes_expanded = prm_dijkstra(graph, start_idx, goal_idx)
@@ -81,7 +81,7 @@ for map_id in range(1, 5):
         record("PRM", map_id, run_id, path, start)
 
         # --- PSO ---
-        mem_before = memory_usage_MB()
+        #mem_before = memory_usage_MB()
         start = time.time()
         path = particle_swarm_optimization(map_id, show_plot=False)
         record("PSO", map_id, run_id, path, start)
