@@ -37,7 +37,7 @@ def record(algorithm, map_id, run_id, path, start_time, memory_before,node_expan
 # ========== Main Loop ==========
 for map_id in range(1, 5):
     print(f"=== MAP {map_id} ===")
-    for run_id in range(1, 31):  # 30 runs
+    for run_id in range(1, 101):  # 30 runs
         print(f"\n[Map {map_id} - Run {run_id}]")
 
         grid = grid_map(map_id)
