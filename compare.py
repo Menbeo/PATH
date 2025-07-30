@@ -2,110 +2,93 @@ import time
 import csv
 import tracemalloc
 from memory_profiler import memory_usage
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from gridmap import grid_map, default_start, default_goal, compute_neighborhood_layers
-from convert_to_waypoints import export_waypoints
-from Dijkstra import Dijkstra
-from Julastar import astar, simplify_path as simplify_astar
-from Julrrt import rrt, simplify_path as simplify_rrt
-from probalisitc_road_map import sample_points, connect_nodes, dijkstra as prm_dijkstra
-from PSO import particle_swarm_optimization
+def single_run(map_id, run_id):
+    import tracemalloc
+    import time
+    from memory_profiler import memory_usage
+    from gridmap import grid_map, default_start, default_goal, compute_neighborhood_layers
+    from Dijkstra import Dijkstra
+    from Julastar import astar, simplify_path as simplify_astar
+    from Julrrt import rrt, simplify_path as simplify_rrt
+    from probalisitc_road_map import sample_points, connect_nodes, dijkstra as prm_dijkstra
+    from PSO import particle_swarm_optimization
 
-# Helper function to profile memory and time
-def profile_function(func, *args, **kwargs):
-    start_time = time.time()
-    tracemalloc.start()
-    mem_before = memory_usage(-1, interval=0.01, timeout=1)[0]
-
-    result = func(*args, **kwargs)
-
-    mem_after = memory_usage(-1, interval=0.01, timeout=1)[0]
-    current, peak = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-
-    exec_time = time.time() - start_time
-    memory_used = mem_after - mem_before  # in MB
-    return result, exec_time, memory_used
-
-def path_length(path):
-    return len(path) if path else 0
-
-# Initialize CSV files
-csv_files = {
-    "path_length": open("path_length.csv", "w", newline=""),
-    "execution_time": open("execution_time.csv", "w", newline=""),
-    "nodes_used": open("nodes_used.csv", "w", newline=""),
-    "memory_usage": open("memory_usage.csv", "w", newline=""),
-}
-csv_writers = {k: csv.writer(f) for k, f in csv_files.items()}
-for writer in csv_writers.values():
-    writer.writerow(["Map", "Algorithm", "Run", "Value"])
-
-# Benchmark loop
-for map_id in range(1, 5):
-    print(f"\n=== Processing Map {map_id} ===")
-    for run in range(1, 501):
-        print(f"Run {run}/500")
-        grid = grid_map(map_id)
-        inflation = compute_neighborhood_layers(grid)
-
-        # Dijkstra
-        def run_dijkstra():
-            return Dijkstra(inflation, default_start, default_goal)
-        path, exec_time, mem = profile_function(run_dijkstra)
-        csv_writers["path_length"].writerow([map_id, "Dijkstra", run, path_length(path)])
-        csv_writers["execution_time"].writerow([map_id, "Dijkstra", run, exec_time])
-        csv_writers["memory_usage"].writerow([map_id, "Dijkstra", run, mem])
-        csv_writers["nodes_used"].writerow([map_id, "Dijkstra", run, len(path)])
-
-        # A*
-        def run_astar():
-            return simplify_astar(grid, astar(grid, default_start, default_goal))
-        path, exec_time, mem = profile_function(run_astar)
-        csv_writers["path_length"].writerow([map_id, "Astar", run, path_length(path)])
-        csv_writers["execution_time"].writerow([map_id, "Astar", run, exec_time])
-        csv_writers["memory_usage"].writerow([map_id, "Astar", run, mem])
-        csv_writers["nodes_used"].writerow([map_id, "Astar", run, len(path)])
-
-        # RRT
-        def run_rrt():
-            return simplify_rrt(grid, rrt(grid, inflation, default_start, default_goal))
-        path, exec_time, mem = profile_function(run_rrt)
-        csv_writers["path_length"].writerow([map_id, "RRT", run, path_length(path)])
-        csv_writers["execution_time"].writerow([map_id, "RRT", run, exec_time])
-        csv_writers["memory_usage"].writerow([map_id, "RRT", run, mem])
-        csv_writers["nodes_used"].writerow([map_id, "RRT", run, len(path)])
-
-        # PRM
-        def run_prm():
-            samples = sample_points(300, grid)
-            samples.append(default_start)
-            samples.append(default_goal)
-            start_idx = len(samples) - 2
-            goal_idx = len(samples) - 1
-            graph = connect_nodes(samples, 50, grid, inflation)
-            idx_path = prm_dijkstra(graph, start_idx, goal_idx)
-            return [samples[i] for i in idx_path] if idx_path else []
+    def profile(func):
+        tracemalloc.start()
+        start_time = time.time()
+        mem_before = memory_usage(-1, interval=0.01, timeout=1)[0]
         try:
-            path, exec_time, mem = profile_function(run_prm)
+            result = func()
         except:
-            path, exec_time, mem = [], 0, 0
-        csv_writers["path_length"].writerow([map_id, "PRM", run, path_length(path)])
-        csv_writers["execution_time"].writerow([map_id, "PRM", run, exec_time])
-        csv_writers["memory_usage"].writerow([map_id, "PRM", run, mem])
-        csv_writers["nodes_used"].writerow([map_id, "PRM", run, len(path)])
+            result = []
+        mem_after = memory_usage(-1, interval=0.01, timeout=1)[0]
+        exec_time = time.time() - start_time
+        memory_used = mem_after - mem_before
+        tracemalloc.stop()
+        return result, exec_time, memory_used
 
-        # PSO
-        def run_pso():
-            return particle_swarm_optimization(map_id, show_plot=False)
-        path, exec_time, mem = profile_function(run_pso)
-        csv_writers["path_length"].writerow([map_id, "PSO", run, path_length(path)])
-        csv_writers["execution_time"].writerow([map_id, "PSO", run, exec_time])
-        csv_writers["memory_usage"].writerow([map_id, "PSO", run, mem])
-        csv_writers["nodes_used"].writerow([map_id, "PSO", run, len(path)])
+    def path_len(p): return len(p) if p else 0
 
-# Close CSV files
-for f in csv_files.values():
-    f.close()
+    grid = grid_map(map_id)
+    inflation = compute_neighborhood_layers(grid)
 
-print("\nBenchmark complete. Results saved in CSV files.")
+    results = []
+
+    # Dijkstra
+    def run_dijkstra():
+        return Dijkstra(inflation, default_start, default_goal)
+    dpath, dtime, dmem = profile(run_dijkstra)
+    results.append((map_id, "Dijkstra", run_id, path_len(dpath), dtime, len(dpath), dmem))
+
+    # A*
+    def run_astar():
+        return simplify_astar(grid, astar(grid, default_start, default_goal))
+    apath, atime, amem = profile(run_astar)
+    results.append((map_id, "Astar", run_id, path_len(apath), atime, len(apath), amem))
+
+    # RRT
+    def run_rrt():
+        return simplify_rrt(grid, rrt(grid, inflation, default_start, default_goal))
+    rpath, rtime, rmem = profile(run_rrt)
+    results.append((map_id, "RRT", run_id, path_len(rpath), rtime, len(rpath), rmem))
+
+    # PRM
+    def run_prm():
+        samples = sample_points(300, grid)
+        samples.append(default_start)
+        samples.append(default_goal)
+        start_idx = len(samples) - 2
+        goal_idx = len(samples) - 1
+        graph = connect_nodes(samples, 50, grid, inflation)
+        idx_path = prm_dijkstra(graph, start_idx, goal_idx)
+        return [samples[i] for i in idx_path] if idx_path else []
+    try:
+        ppath, ptime, pmem = profile(run_prm)
+    except:
+        ppath, ptime, pmem = [], 0, 0
+    results.append((map_id, "PRM", run_id, path_len(ppath), ptime, len(ppath), pmem))
+
+    # PSO
+    def run_pso():
+        return particle_swarm_optimization(map_id, show_plot=False)
+    psopath, psotime, psomem = profile(run_pso)
+    results.append((map_id, "PSO", run_id, path_len(psopath), psotime, len(psopath), psomem))
+
+    return results
+
+# Run all jobs in parallel
+all_results = []
+with ProcessPoolExecutor() as executor:
+    futures = [executor.submit(single_run, map_id, run_id) for map_id in range(1, 5) for run_id in range(1, 50)]
+    for future in as_completed(futures):
+        all_results.extend(future.result())
+
+# Write combined results
+with open("results_combined.csv", "w", newline="") as f:
+    writer = csv.writer(f)
+    writer.writerow(["Map", "Algorithm", "Run", "Path Length", "Execution Time", "Nodes", "Memory Usage"])
+    writer.writerows(all_results)
+
+print("\nParallel benchmark complete. Results saved to results_combined.csv")
