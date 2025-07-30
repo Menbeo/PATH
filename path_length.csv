@@ -1,1 +1,9 @@
 Algorithm,Map,Run,Value
+Dijkstra,1,1,2
+Astar,1,1,5
+RRT,1,1,4
+PRM,1,1,0
+PSO,1,1,19
+Dijkstra,1,2,2
+Astar,1,2,5
+RRT,1,2,3
