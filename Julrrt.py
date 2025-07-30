@@ -66,8 +66,10 @@ def is_collision_free(inflation, point1, point2):
 
 def rrt(grid, inflation, start, goal, max_iter=3000, step_size=2.0, goal_sample_rate=0.1):
     nodes = [start]
+    node_expand = 0
     parents = {start: None}
     for _ in range(max_iter):
+        node_expand += 1
         rand_point = goal if random.random() < goal_sample_rate else (
             random.uniform(0, 50), random.uniform(0, 50))
         nearest = nearest_node(nodes, rand_point)
@@ -84,8 +86,8 @@ def rrt(grid, inflation, start, goal, max_iter=3000, step_size=2.0, goal_sample_
                     while current is not None:
                         path.append(current)
                         current = parents[current]
-                    return path[::-1]
-    return None
+                    return path[::-1],node_expand
+    return None,node_expand
 
 
 
