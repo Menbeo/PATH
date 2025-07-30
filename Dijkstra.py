@@ -1,56 +1,72 @@
-for map_id in range(1, 5):
-    print(f"\n=== Map {map_id} ===")
-    grid = grid_map(map_id=map_id)
-    inflation = compute_neighborhood_layers(grid, inflation_radius=1.8, meters_per_cell=1.0)
+#import gridmap
+from gridmap import create_grid_map, grid_map, default_goal,default_start
+from gridmap import convert_grid_to_lat_lon,compute_neighborhood_layers
+import numpy as np 
+import matplotlib.pyplot as plt
+import heapq
+from convert_to_waypoints import export_waypoints
 
-    # --- Dijkstra ---
-    path = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
-    if not path:
-        print(f"Map {map_id}: Dijkstra - No path found")
-    else:
-        print(f"Map {map_id}: Dijkstra - Path with {len(path)} steps")
+def Dijkstra(grid, start, goal, inflation_layer=None):
+    rows, cols = grid.shape
+    visited = set()
+    previous = {}
+    distance = {start: 0}
+    pq = [(0, start)]
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
-    # --- A* ---
-    from Julastar import astar, simplify_path as simplify_astar
-    path = astar(grid, default_start, default_goal)
-    simplified_astar = simplify_astar(grid, path) if path else []
-    if not simplified_astar:
-        print(f"Map {map_id}: A* - No path found")
-    else:
-        print(f"Map {map_id}: A* - Path with {len(simplified_astar)} steps")
+    while pq:
+        cost, current = heapq.heappop(pq)
+        if current in visited:
+            continue
+        visited.add(current)  # Count expanded nodes
 
-    # --- RRT ---
-    from Julrrt import rrt, simplify_path as simplify_rrt
-    path = rrt(grid, inflation, default_start, default_goal)
-    simplified_rrt = simplify_rrt(grid, path) if path else []
-    if not simplified_rrt:
-        print(f"Map {map_id}: RRT - No path found")
-    else:
-        print(f"Map {map_id}: RRT - Path with {len(simplified_rrt)} steps")
+        if current == goal:
+            break
 
-    # --- PRM ---
-    from probalisitc_road_map import sample_points, connect_nodes, dijkstra as prm_dijkstra
-    samples = sample_points(300, grid)
-    samples.append(default_start)
-    samples.append(default_goal)
-    start_idx = len(samples) - 2
-    goal_idx = len(samples) - 1
-    graph = connect_nodes(samples, radius=50, grid=grid, inflation=inflation)
+        for dx, dy in directions:
+            neighbor = current[0] + dx, current[1] + dy
+            if 0 <= neighbor[0] < rows and 0 <= neighbor[1] < cols:
+                if grid[neighbor] == 0:
+                    if inflation_layer is not None and inflation_layer[neighbor] == 1:
+                        layer_cost = 1_000_000
+                    else:
+                        layer_cost = 1
 
-    try:
-        path_idx = prm_dijkstra(graph, start_idx, goal_idx)
-        path_prm = [samples[i] for i in path_idx] if path_idx else []
-        if not path_prm:
-            print(f"Map {map_id}: PRM - No path found")
+                    new_cost = cost + layer_cost
+
+                    if new_cost < distance.get(neighbor, float('inf')):
+                        distance[neighbor] = new_cost
+                        previous[neighbor] = current
+                        heapq.heappush(pq, (new_cost, neighbor))
+
+    # Reconstruct path
+    path = []
+    node = goal
+    while node != start:
+        path.append(node)
+        node = previous.get(node)
+        if node is None:
+            return [], len(visited)
+    path.append(start)
+    path.reverse()
+    return path, len(visited)
+
+        
+if __name__ == "__main__":
+    for map_id in range(1, 5):
+        grid = grid_map(map_id=map_id)
+        inflation = compute_neighborhood_layers(grid, inflation_radius=1.8, meters_per_cell=1.0)
+
+        # Use original grid for obstacles, and inflation as layer cost
+        path, nodes_expanded = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
+
+
+        if not path:
+            print(f"Map {map_id}: No path found")
         else:
-            print(f"Map {map_id}: PRM - Path with {len(path_prm)} steps")
-    except:
-        print(f"Map {map_id}: PRM - No path found")
+            print(f"Map {map_id}: Path found with {len(path)} steps")
+            create_grid_map(inflation, path)  # Optional: show on inflated map
+            lat_lon_path = [convert_grid_to_lat_lon(x, y) for x, y in path]
+            filename = f"Dijkstra_map{map_id}.waypoints"
+            export_waypoints(lat_lon_path, filename=filename)
 
-    # --- PSO ---
-    from PSO import particle_swarm_optimization
-    path = particle_swarm_optimization(map_id, show_plot=False)
-    if not path:
-        print(f"Map {map_id}: PSO - No path found")
-    else:
-        print(f"Map {map_id}: PSO - Path with {len(path)} steps")

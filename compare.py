@@ -1,19 +1,22 @@
 import csv
 import psutil
 import time
-import tracemalloc
 import numpy as np
-from gridmap import create_grid_map, default_start, default_goal, compute_neighborhood_layers, grid_map
 
+from gridmap import grid_map, default_start, default_goal, compute_neighborhood_layers
+from Dijkstra import Dijkstra
+from Julastar import astar, simplify_path as simplify_astar
+from Julrrt import rrt, simplify_path as simplify_rrt
+from probalisitc_road_map import sample_points, connect_nodes, dijkstra as prm_dijkstra
+from PSO import particle_swarm_optimization
 
-# CSV files
+# ========== Setup CSVs ==========
 csv_files = {
     "length": open("path_length.csv", "w", newline=''),
     "time": open("execution_time.csv", "w", newline=''),
-    "node": open("node_usage.csv", "w", newline=''),
-    "memory": open("memory_usage.csv", "w", newline='')
+    "memory": open("memory_usage.csv", "w", newline=''),
+    "nodes": open("node_expansion.csv", "w", newline=''),
 }
-
 csv_writers = {key: csv.writer(f) for key, f in csv_files.items()}
 for writer in csv_writers.values():
     writer.writerow(["Algorithm", "Map", "Run", "Value"])
@@ -21,7 +24,7 @@ for writer in csv_writers.values():
 def memory_usage_MB():
     return psutil.Process().memory_info().rss / 1024**2
 
-def record(algorithm, map_id, run_id, path, start_time, memory_before, node_count=None):
+def record(algorithm, map_id, run_id, path, node_expansion, start_time, memory_before):
     elapsed_time = time.time() - start_time
     mem_used = memory_usage_MB() - memory_before
     path_len = len(path) if path else 0
@@ -29,72 +32,67 @@ def record(algorithm, map_id, run_id, path, start_time, memory_before, node_coun
     csv_writers["length"].writerow([algorithm, map_id, run_id, path_len])
     csv_writers["time"].writerow([algorithm, map_id, run_id, elapsed_time])
     csv_writers["memory"].writerow([algorithm, map_id, run_id, mem_used])
-    if node_count is not None:
-        csv_writers["node"].writerow([algorithm, map_id, run_id, node_count])
-    else:
-        csv_writers["node"].writerow([algorithm, map_id, run_id, "N/A"])
+    csv_writers["nodes"].writerow([algorithm, map_id, run_id, node_expansion])
 
-# Main loop
+# ========== Main Loop ==========
 for map_id in range(1, 5):
-    from Dijkstra import Dijkstra
-    print(f"\n=== Map {map_id} ===")
-    grid = grid_map(map_id=map_id)
-    inflation = compute_neighborhood_layers(grid, inflation_radius=1.8, meters_per_cell=1.0)
+    print(f"=== MAP {map_id} ===")
+    for run_id in range(1, 31):  # 30 runs
+        print(f"\n[Map {map_id} - Run {run_id}]")
 
-    # --- Dijkstra ---
-    path = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
-    if not path:
-        print(f"Map {map_id}: Dijkstra - No path found")
-    else:
-        print(f"Map {map_id}: Dijkstra - Path with {len(path)} steps")
+        grid = grid_map(map_id)
+        inflation = compute_neighborhood_layers(grid)
 
-    # --- A* ---
-    from Julastar import astar, simplify_path as simplify_astar
-    path = astar(grid, default_start, default_goal)
-    simplified_astar = simplify_astar(grid, path) if path else []
-    if not simplified_astar:
-        print(f"Map {map_id}: A* - No path found")
-    else:
-        print(f"Map {map_id}: A* - Path with {len(simplified_astar)} steps")
+        # --- Dijkstra ---
+        mem_before = memory_usage_MB()
+        start = time.time()
+        path, nodes_expanded = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
+        record("Dijkstra", map_id, run_id, path, nodes_expanded, start, mem_before)
 
-    # --- RRT ---
-    from Julrrt import rrt, simplify_path as simplify_rrt
-    path = rrt(grid, inflation, default_start, default_goal)
-    simplified_rrt = simplify_rrt(grid, path) if path else []
-    if not simplified_rrt:
-        print(f"Map {map_id}: RRT - No path found")
-    else:
-        print(f"Map {map_id}: RRT - Path with {len(simplified_rrt)} steps")
+        # --- A* ---
+        mem_before = memory_usage_MB()
+        start = time.time()
+        path, nodes_expanded = astar(grid, default_start, default_goal)
+        path = simplify_astar(grid, path) if path else []
+        record("Astar", map_id, run_id, path, nodes_expanded, start, mem_before)
 
-    # --- PRM ---
-    from probalisitc_road_map import sample_points, connect_nodes, dijkstra as prm_dijkstra
-    samples = sample_points(300, grid)
-    samples.append(default_start)
-    samples.append(default_goal)
-    start_idx = len(samples) - 2
-    goal_idx = len(samples) - 1
-    graph = connect_nodes(samples, radius=50, grid=grid, inflation=inflation)
+        # --- RRT ---
+        mem_before = memory_usage_MB()
+        start = time.time()
+        path, nodes_expanded = rrt(grid, inflation, default_start, default_goal)
+        path = simplify_rrt(grid, path) if path else []
+        record("RRT", map_id, run_id, path, nodes_expanded, start, mem_before)
 
-    try:
-        path_idx = prm_dijkstra(graph, start_idx, goal_idx)
-        path_prm = [samples[i] for i in path_idx] if path_idx else []
-        if not path_prm:
-            print(f"Map {map_id}: PRM - No path found")
-        else:
-            print(f"Map {map_id}: PRM - Path with {len(path_prm)} steps")
-    except:
-        print(f"Map {map_id}: PRM - No path found")
+        # --- PRM ---
+        samples = sample_points(300, grid)
+        samples.append(default_start)
+        samples.append(default_goal)
+        start_idx = len(samples) - 2
+        goal_idx = len(samples) - 1
+        graph = connect_nodes(samples, radius=50, grid=grid, inflation=inflation)
 
-    # --- PSO ---
-    from PSO import particle_swarm_optimization
-    path = particle_swarm_optimization(map_id, show_plot=False)
-    if not path:
-        print(f"Map {map_id}: PSO - No path found")
-    else:
-        print(f"Map {map_id}: PSO - Path with {len(path)} steps")
+        mem_before = memory_usage_MB()
+        start = time.time()
+        try:
+            path_idx, nodes_expanded = prm_dijkstra(graph, start_idx, goal_idx)
+            path = [samples[i] for i in path_idx] if path_idx else []
+        except:
+            path = []
+            nodes_expanded = 0
+        record("PRM", map_id, run_id, path, nodes_expanded, start, mem_before)
 
-# Close CSV files
+        # --- PSO ---
+        mem_before = memory_usage_MB()
+        start = time.time()
+        path, nodes_expanded = particle_swarm_optimization(map_id, show_plot=False)
+        record("PSO", map_id, run_id, path, nodes_expanded, start, mem_before)
+
+# ========== Close Files ==========
 for f in csv_files.values():
     f.close()
 
-print("✅ Benchmarking complete. Results saved in CSV files.")
+print("\n✅ Done. Data saved in:")
+print("- path_length.csv")
+print("- execution_time.csv")
+print("- memory_usage.csv")
+print("- node_expansion.csv")
