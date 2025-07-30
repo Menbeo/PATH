@@ -72,6 +72,7 @@ def astar(grid, start, goal):
     came_from = {}
     g_score = {start: 0}
     visited = set()
+    node_expand = 0 
 
     while open_set:
         _, cost, current, parent = heapq.heappop(open_set)
@@ -80,13 +81,15 @@ def astar(grid, start, goal):
             continue
         visited.add(current)
         came_from[current] = parent
+        node_expand += 1
+       
 
         if current == goal:
             path = []
             while current:
                 path.append(current)
                 current = came_from[current]
-            return path[::-1]
+            return path[::-1], node_expand
 
         for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
             nx, ny = current[0] + dx, current[1] + dy
@@ -98,7 +101,7 @@ def astar(grid, start, goal):
                     f_score = tentative_g + heuristic(neighbor, goal)
                     heapq.heappush(open_set, (f_score, tentative_g, neighbor, current))
 
-    return None
+    return None,node_expand
 
 
 
