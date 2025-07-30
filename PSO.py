@@ -14,11 +14,12 @@ GRID_SIZE = 50
 B_LO = 0
 B_HI = GRID_SIZE - 1
 POPULATION = 150
-V_MAX = 3.0
+V_MAX = 1.0
 PERSONAL_C = 2.0
 SOCIAL_C = 2.0
 CONVERGENCE_DISTANCE = 0.5
 MAX_ITER = 500
+node_expand = 0 
 
 def cost_function_grid(x, y, grid_data, neighborhood_layers_data, goal_pos):
     rows, cols = grid_data.shape
@@ -89,6 +90,7 @@ def particle_swarm_optimization(map_id, show_plot=False):
 
     for curr_iter in range(MAX_ITER):
         for particle in swarm.particles:
+            node_expand += 1
             r1 = np.random.uniform(0, 1, DIMENSIONS)
             r2 = np.random.uniform(0, 1, DIMENSIONS)
             inertia_weight = 0.9 - ((0.7 / MAX_ITER) * curr_iter)
@@ -152,7 +154,7 @@ def particle_swarm_optimization(map_id, show_plot=False):
         plt.grid(True)
         plt.show()
 
-    return int_path
+    return int_path,node_expand
 # --- Main Execution ---
 if __name__ == "__main__":
     for i in range(1,5):
