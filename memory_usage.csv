@@ -1,5 +1,5 @@
 Algorithm,Map,Run,Value
-Dijkstra,1,1,0.53515625
-Astar,1,1,0.02734375
+Dijkstra,1,1,0.5625
+Astar,1,1,0.0078125
 RRT,1,1,0.00390625
 PRM,1,1,0.01171875
