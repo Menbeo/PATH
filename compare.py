@@ -1,75 +1,100 @@
 import csv
+import psutil
 import time
 import tracemalloc
-import psutil
-import os
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from memory_profiler import memory_usage
+import numpy as np
+from gridmap import create_grid_map, default_start, default_goal, compute_neighborhood_layers, grid_map
 
-from gridmap import create_grid_map  # Your function to generate/load a map
-from Dijkstra import Dijkstra
-from Julastar import astar, simplify_path as simplify_astar
-from Julrrt import rrt, simplify_path as simplify_rrt
-from probalisitc_road_map import sample_points, connect_nodes, dijkstra as prm_dijkstra
-from PSO import particle_swarm_optimization
 
-algorithms = {
-    'Dijkstra': Dijkstra,
-    'A*': astar,
-    'RRT': rrt,
-    'PRM': prm_dijkstra,
-    'PSO': particle_swarm_optimization
+# CSV files
+csv_files = {
+    "length": open("path_length.csv", "w", newline=''),
+    "time": open("execution_time.csv", "w", newline=''),
+    "node": open("node_usage.csv", "w", newline=''),
+    "memory": open("memory_usage.csv", "w", newline='')
 }
 
-headers = ['Algorithm', 'Map', 'Run', 'Path Length', 'Execution Time', 'Memory Usage (MB)', 'Node Usage']
+csv_writers = {key: csv.writer(f) for key, f in csv_files.items()}
+for writer in csv_writers.values():
+    writer.writerow(["Algorithm", "Map", "Run", "Value"])
 
+def memory_usage_MB():
+    return psutil.Process().memory_info().rss / 1024**2
 
-def run_algorithm(algorithm_name, pathfinder, grid, inflated_grid):
-    tracemalloc.start()
-    start_time = time.perf_counter()
-    mem_usage, (path, nodes) = memory_usage((pathfinder, (grid, inflated_grid)), retval=True, max_usage=True)
-    exec_time = time.perf_counter() - start_time
-    current, peak = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
+def record(algorithm, map_id, run_id, path, start_time, memory_before, node_count=None):
+    elapsed_time = time.time() - start_time
+    mem_used = memory_usage_MB() - memory_before
+    path_len = len(path) if path else 0
 
-    if path is None or len(path) < 2:
-        path_length = float('inf')
+    csv_writers["length"].writerow([algorithm, map_id, run_id, path_len])
+    csv_writers["time"].writerow([algorithm, map_id, run_id, elapsed_time])
+    csv_writers["memory"].writerow([algorithm, map_id, run_id, mem_used])
+    if node_count is not None:
+        csv_writers["node"].writerow([algorithm, map_id, run_id, node_count])
     else:
-        path_length = sum(((x0 - x1)**2 + (y0 - y1)**2)**0.5 for ((x0, y0), (x1, y1)) in zip(path[:-1], path[1:]))
+        csv_writers["node"].writerow([algorithm, map_id, run_id, "N/A"])
 
-    return path_length, exec_time, mem_usage, len(nodes)
+# Main loop
+for map_id in range(1, 5):
+    from Dijkstra import Dijkstra
+    print(f"\n=== Map {map_id} ===")
+    grid = grid_map(map_id=map_id)
+    inflation = compute_neighborhood_layers(grid, inflation_radius=1.8, meters_per_cell=1.0)
 
+    # --- Dijkstra ---
+    path = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
+    if not path:
+        print(f"Map {map_id}: Dijkstra - No path found")
+    else:
+        print(f"Map {map_id}: Dijkstra - Path with {len(path)} steps")
 
-def single_run(map_id, run_id):
-    results = []
-    grid, inflated_grid = create_grid_map(map_id)
-    for algo_name, pathfinder in algorithms.items():
-        path_length, exec_time, mem, node_count = run_algorithm(algo_name, pathfinder, grid, inflated_grid)
-        results.append([
-            algo_name, f"Map {map_id}", run_id, path_length, exec_time, mem, node_count
-        ])
-    return results
+    # --- A* ---
+    from Julastar import astar, simplify_path as simplify_astar
+    path = astar(grid, default_start, default_goal)
+    simplified_astar = simplify_astar(grid, path) if path else []
+    if not simplified_astar:
+        print(f"Map {map_id}: A* - No path found")
+    else:
+        print(f"Map {map_id}: A* - Path with {len(simplified_astar)} steps")
 
+    # --- RRT ---
+    from Julrrt import rrt, simplify_path as simplify_rrt
+    path = rrt(grid, inflation, default_start, default_goal)
+    simplified_rrt = simplify_rrt(grid, path) if path else []
+    if not simplified_rrt:
+        print(f"Map {map_id}: RRT - No path found")
+    else:
+        print(f"Map {map_id}: RRT - Path with {len(simplified_rrt)} steps")
 
-if __name__ == '__main__':
-    from multiprocessing import freeze_support
-    freeze_support()
+    # --- PRM ---
+    from probalisitc_road_map import sample_points, connect_nodes, dijkstra as prm_dijkstra
+    samples = sample_points(300, grid)
+    samples.append(default_start)
+    samples.append(default_goal)
+    start_idx = len(samples) - 2
+    goal_idx = len(samples) - 1
+    graph = connect_nodes(samples, radius=50, grid=grid, inflation=inflation)
 
-    output_file = 'results_combined.csv'
-    with open(output_file, 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(headers)
+    try:
+        path_idx = prm_dijkstra(graph, start_idx, goal_idx)
+        path_prm = [samples[i] for i in path_idx] if path_idx else []
+        if not path_prm:
+            print(f"Map {map_id}: PRM - No path found")
+        else:
+            print(f"Map {map_id}: PRM - Path with {len(path_prm)} steps")
+    except:
+        print(f"Map {map_id}: PRM - No path found")
 
-        all_results = []
-        with ProcessPoolExecutor() as executor:
-            futures = [executor.submit(single_run, map_id, run_id)
-                       for map_id in range(1, 5)  # Maps 1 to 4
-                       for run_id in range(1, 21)]  # 500 runs each
+    # --- PSO ---
+    from PSO import particle_swarm_optimization
+    path = particle_swarm_optimization(map_id, show_plot=False)
+    if not path:
+        print(f"Map {map_id}: PSO - No path found")
+    else:
+        print(f"Map {map_id}: PSO - Path with {len(path)} steps")
 
-            for future in as_completed(futures):
-                result_rows = future.result()
-                all_results.extend(result_rows)
+# Close CSV files
+for f in csv_files.values():
+    f.close()
 
-        writer.writerows(all_results)
-
-    print(f"All results written to {output_file}")
+print("✅ Benchmarking complete. Results saved in CSV files.")
