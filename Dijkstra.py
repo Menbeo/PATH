@@ -13,13 +13,13 @@ def Dijkstra(grid, start, goal, inflation_layer=None):
     distance = {start: 0}
     pq = [(0, start)]
     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-
+    node_expand = 0
     while pq:
         cost, current = heapq.heappop(pq)
         if current in visited:
             continue
-        visited.add(current)  # Count expanded nodes
-
+        visited.add(current)
+        node_expand += 1
         if current == goal:
             break
 
@@ -27,6 +27,7 @@ def Dijkstra(grid, start, goal, inflation_layer=None):
             neighbor = current[0] + dx, current[1] + dy
             if 0 <= neighbor[0] < rows and 0 <= neighbor[1] < cols:
                 if grid[neighbor] == 0:
+                    # === Apply cost based on inflation layer ===
                     if inflation_layer is not None and inflation_layer[neighbor] == 1:
                         layer_cost = 1_000_000
                     else:
@@ -38,7 +39,9 @@ def Dijkstra(grid, start, goal, inflation_layer=None):
                         distance[neighbor] = new_cost
                         previous[neighbor] = current
                         heapq.heappush(pq, (new_cost, neighbor))
-
+    if goal not in previous:
+        # If goal is not reached
+        return [], node_expand
     # Reconstruct path
     path = []
     node = goal
@@ -46,10 +49,10 @@ def Dijkstra(grid, start, goal, inflation_layer=None):
         path.append(node)
         node = previous.get(node)
         if node is None:
-            return [], len(visited)
+            return []
     path.append(start)
     path.reverse()
-    return path, len(visited)
+    return path, node_expand
 
         
 if __name__ == "__main__":
@@ -58,8 +61,7 @@ if __name__ == "__main__":
         inflation = compute_neighborhood_layers(grid, inflation_radius=1.8, meters_per_cell=1.0)
 
         # Use original grid for obstacles, and inflation as layer cost
-        path, nodes_expanded = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
-
+        path = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
 
         if not path:
             print(f"Map {map_id}: No path found")
