@@ -19,7 +19,7 @@ PERSONAL_C = 2.0
 SOCIAL_C = 2.0
 CONVERGENCE_DISTANCE = 0.5
 MAX_ITER = 500
-node_expand = 0 
+
 
 def cost_function_grid(x, y, grid_data, neighborhood_layers_data, goal_pos):
     rows, cols = grid_data.shape
@@ -84,6 +84,7 @@ class Swarm:
                 self.global_best_path = particle.personal_path.copy()
 
 def particle_swarm_optimization(map_id, show_plot=False):
+    node_expand = 0 
     grid = grid_map(map_id=map_id, size=GRID_SIZE)
     neighborhood_layers = compute_neighborhood_layers(grid)
     swarm = Swarm(POPULATION, V_MAX, grid, neighborhood_layers, default_goal, default_start)
