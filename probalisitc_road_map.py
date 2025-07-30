@@ -48,6 +48,7 @@ def dijkstra(graph, start_idx,  goal_idx):
     dist[start_idx] = 0
     visited = set()
     inflation = compute_neighborhood_layers(grid)
+    node_expand = 0 
     while True:
         current = None
         min_dist = float('inf')
@@ -58,6 +59,7 @@ def dijkstra(graph, start_idx,  goal_idx):
         if current is None or current == goal_idx:
             break
         visited.add(current)
+        node_expand += 1
 
         for neighbor, weight in graph[current]:
             if neighbor in visited:
