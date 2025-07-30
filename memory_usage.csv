@@ -1,0 +1,7 @@
+Map,Algorithm,Run,Value
+1,Dijkstra,1,0.78515625
+1,Astar,1,0.0078125
+1,RRT,1,0.0078125
+1,PRM,1,0
+1,PSO,1,2.98046875
+1,Dijkstra,2,0.03125
