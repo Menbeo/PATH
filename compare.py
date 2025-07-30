@@ -46,22 +46,22 @@ for map_id in range(1, 5):
         # --- Dijkstra ---
         mem_before = memory_usage_MB()
         start = time.time()
-        path, nodes_expanded = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
-        record("Dijkstra", map_id, run_id, path, nodes_expanded, start, mem_before)
+        path = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
+        record("Dijkstra", map_id, run_id, path, start, mem_before)
 
         # --- A* ---
         mem_before = memory_usage_MB()
         start = time.time()
-        path, nodes_expanded = astar(grid, default_start, default_goal)
+        path = astar(grid, default_start, default_goal)
         path = simplify_astar(grid, path) if path else []
-        record("Astar", map_id, run_id, path, nodes_expanded, start, mem_before)
+        record("Astar", map_id, run_id, path, start, mem_before)
 
         # --- RRT ---
         mem_before = memory_usage_MB()
         start = time.time()
-        path, nodes_expanded = rrt(grid, inflation, default_start, default_goal)
+        path = rrt(grid, inflation, default_start, default_goal)
         path = simplify_rrt(grid, path) if path else []
-        record("RRT", map_id, run_id, path, nodes_expanded, start, mem_before)
+        record("RRT", map_id, run_id, path, start, mem_before)
 
         # --- PRM ---
         samples = sample_points(300, grid)
@@ -78,14 +78,13 @@ for map_id in range(1, 5):
             path = [samples[i] for i in path_idx] if path_idx else []
         except:
             path = []
-            nodes_expanded = 0
-        record("PRM", map_id, run_id, path, nodes_expanded, start, mem_before)
+        record("PRM", map_id, run_id, path, start, mem_before)
 
         # --- PSO ---
         mem_before = memory_usage_MB()
         start = time.time()
-        path, nodes_expanded = particle_swarm_optimization(map_id, show_plot=False)
-        record("PSO", map_id, run_id, path, nodes_expanded, start, mem_before)
+        path = particle_swarm_optimization(map_id, show_plot=False)
+        record("PSO", map_id, run_id, path, start, mem_before)
 
 # ========== Close Files ==========
 for f in csv_files.values():
