@@ -72,7 +72,7 @@ def astar(grid, start, goal):
     came_from = {}
     g_score = {start: 0}
     visited = set()
-    node_expand = 0 
+    
 
     while open_set:
         _, cost, current, parent = heapq.heappop(open_set)
@@ -81,7 +81,7 @@ def astar(grid, start, goal):
             continue
         visited.add(current)
         came_from[current] = parent
-        node_expand += 1
+       
        
 
         if current == goal:
@@ -89,7 +89,7 @@ def astar(grid, start, goal):
             while current:
                 path.append(current)
                 current = came_from[current]
-            return path[::-1], node_expand
+            return path[::-1]
 
         for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
             nx, ny = current[0] + dx, current[1] + dy
@@ -101,7 +101,7 @@ def astar(grid, start, goal):
                     f_score = tentative_g + heuristic(neighbor, goal)
                     heapq.heappush(open_set, (f_score, tentative_g, neighbor, current))
 
-    return None,node_expand
+    return None
 
 
 
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     for map_id in range(1,5):
         print(f"Displaying Map {map_id}")
         grid = grid_map(map_id=map_id)
-        path,node_expand = astar(grid, default_start, default_goal)
+        path = astar(grid, default_start, default_goal)
         if path:
             print(f"Original path length: {len(path)}")
             smoothed_path = smooth_path(path)
