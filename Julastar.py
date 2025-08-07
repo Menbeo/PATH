@@ -111,7 +111,7 @@ if __name__ == "__main__":
         print(f"Displaying Map {map_id}")
         grid = grid_map(map_id=map_id)
         path = astar(grid, default_start, default_goal)
-        if path:
+        if path is not None and len(path) > 0 :
             print(f"Original path length: {len(path)}")
             smoothed_path = smooth_path(path)
             print(f"Simplified path length: {len(smoothed_path)}")
