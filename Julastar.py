@@ -110,7 +110,7 @@ if __name__ == "__main__":
     for map_id in range(1,5):
         print(f"Displaying Map {map_id}")
         grid = grid_map(map_id=map_id)
-        path = astar(grid, default_start, default_goal)
+        path,node_expand = astar(grid, default_start, default_goal)
         if path:
             print(f"Original path length: {len(path)}")
             smoothed_path = smooth_path(path)
