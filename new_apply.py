@@ -8,8 +8,8 @@ def smooth_path (path, angle_threshold = 30):
         return path
     smoothed = [path[0]]
     for i in range(1, len(path) - 1):
-        prev_vector = path[i] - path[i - 1]
-        next_vector = path[i + 1] - path[i]
+        prev_vector =  np.array(path[i]) - np.array(path[i - 1])
+        next_vector = np.array(path[i + 1]) - np.array(path[i])
         angle = angle_between(prev_vector, next_vector)
         if angle < np.radians(angle_threshold):
             smoothed.append(path[i])
