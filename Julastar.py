@@ -8,57 +8,7 @@ from convert_to_waypoints import export_waypoints
 from gridmap import convert_grid_to_lat_lon
 from gridmap import create_grid_map, grid_map, default_goal,default_start
 from new_apply import smooth_path, angle_between 
-# # ========== PATH SIMPLIFICATION ==========
-# def bresenham_line(x0, y0, x1, y1):
-#     """Generate points along a straight line from (x0, y0) to (x1, y1) using Bresenham's algorithm."""
-#     points = []
-#     dx = abs(x1 - x0)
-#     dy = abs(y1 - y0)
-#     sx = 1 if x0 < x1 else -1
-#     sy = 1 if y0 < y1 else -1
-#     err = dx - dy
-#     while True:
-#         points.append((x0, y0))
-#         if x0 == x1 and y0 == y1:
-#             break
-#         e2 = 2 * err
-#         if e2 > -dy:
-#             err -= dy
-#             x0 += sx
-#         if e2 < dx:
-#             err += dx
-#             y0 += sy
-#     return points
 
-# def simplify_path(grid, path):
-#     """Simplify the path by removing redundant waypoints using line-of-sight checks."""
-#     if not path or len(path) < 2:
-#         return path
-    
-#     simplified = [path[0]]
-#     rows, cols = grid.shape
-    
-#     i = 0
-#     while i < len(path) - 1:
-#         for j in range(len(path) - 1, i, -1):
-#             x0, y0 = path[i]
-#             x1, y1 = path[j]
-#             # Check if the line between points i and j is clear
-#             clear = True
-#             for x, y in bresenham_line(x0, y0, x1, y1):
-#                 if not (0 <= x < rows and 0 <= y < cols) or grid[x, y] == 1:
-#                     clear = False
-#                     break
-#             if clear:
-#                 simplified.append(path[j])
-#                 i = j
-#                 break
-#         else:
-#             i += 1
-#             if i < len(path):
-#                 simplified.append(path[i])
-    
-#     return simplified
 
 # ========== A* PATHFINDING ==========
 def heuristic(a, b):
@@ -108,7 +58,7 @@ if __name__ == "__main__":
         print(f"Displaying Map {map_id}")
         grid = grid_map(map_id=map_id)
         path = astar(grid, default_start, default_goal)
-        if path:
+        if path is not None and len(path) > 0:
             print(f"Original path length: {len(path)}")
             smoothed_path = smooth_path(path)
             print(f"Simplified path length: {len(smoothed_path)}")
