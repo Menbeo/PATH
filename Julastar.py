@@ -59,14 +59,11 @@ if __name__ == "__main__":
         grid = grid_map(map_id=map_id)
         path = astar(grid, default_start, default_goal)
         if path is not None and len(path) > 0:
-            print(f"Original path length: {len(path)}")
-            smoothed_path = smooth_path(path)
-            print(f"Simplified path length: {len(smoothed_path)}")
-
-            create_grid_map(grid, smoothed_path)
-            lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in smoothed_path]
-            filename = f"A_star{map_id}.waypoints"
-            export_waypoints(lat_lon_path, filename=filename)
+                smoothed_path = smooth_path(path)
+                create_grid_map(grid, smoothed_path)
+                lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in smoothed_path]
+                filename = f"A_star{map_id}.waypoints"
+                export_waypoints(lat_lon_path, filename=filename)
         else:
-            print("No path found.")
-            create_grid_map(grid)
+                print("No path found.")
+                create_grid_map(grid)
