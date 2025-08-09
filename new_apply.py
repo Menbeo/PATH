@@ -5,7 +5,7 @@ def angle_between_calculate(v1,v2):
     v1 = v1 / np.linalg.norm(v1)
     v2 = v2 / np.linalg.norm(v2) 
     pi = 3.14
-    return np.arccos(np.dot((v1,v2), -1, 1)) * 180/pi
+    return np.arccos(np.clip(np.dot(v1,v2), -1.0, 1.0)) * 180/pi
 
 def turn_constraint(path, grid, min_angle = 30, max_angle = 45, min_dist = 2, max_dist = 10):
     #constrain corner adapt base on distance to obstacles. 
