@@ -19,20 +19,28 @@ def turn_constraint(path, angle_threshold=45):
     return smoothed
 
 
-def bspline_smooth(path, smoothing_factor= 3.0, num_points= 200):
-    """Smooth the path using B-spline interpolation."""
+def bspline_smooth(path, smoothing_factor=None, num_points=300):
+    """
+    Aggressive B-spline smoothing for A* paths.
+    
+    path : list of (x, y) points
+    smoothing_factor : None = auto based on path length
+    num_points : int, number of output points
+    """
     path = np.array(path, dtype=float)
 
     if len(path) < 3:
-        return path  # no smoothing possible
+        return path
 
     x = path[:, 0]
     y = path[:, 1]
 
-    # Choose spline degree k
-    k = min(3, len(path) - 1)  # ensure m > k
+    k = min(3, len(path) - 1)
 
-    # Fit spline
+    # Auto smoothing factor: more points → higher s
+    if smoothing_factor is None:
+        smoothing_factor = len(path) * 2.0  
+
     tck, _ = interpolate.splprep([x, y], s=smoothing_factor, k=k)
     u_fine = np.linspace(0, 1, num_points)
     x_fine, y_fine = interpolate.splev(u_fine, tck)
