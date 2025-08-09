@@ -110,16 +110,18 @@ if __name__ == "__main__":
         print(f"Displaying Map {map_id}")
         grid = grid_map(map_id=map_id)
         path = astar(grid, default_start, default_goal)
-        # if path:
+        if path:
             # print(f"Original path length: {len(path)}")
-        simplified_path = simplify_path(grid, path)
-        simplified_path_corner = turn_constraint(simplified_path)
-        round_path = bspline_smooth(simplified_path_corner)
+            simplified_path = simplify_path(grid, path)
+            simplified_path_corner = turn_constraint(simplified_path)
+            round_path = bspline_smooth(simplified_path_corner)
             # print(f"Simplified path length: {len(simplified_path)}")
-        create_grid_map(grid, round_path)
+       
+            round_path_int = [(int(x), int(y)) for x, y in round_path]
+            create_grid_map(grid, round_path_int)
             # lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in simplified_path_corner]
             # filename = f"A_star{map_id}.waypoints"
             # export_waypoints(lat_lon_path, filename=filename)
-        # else:
-        print("No path found.")
-        create_grid_map(grid)
+        else:
+            print("No path found.")
+            create_grid_map(grid)
