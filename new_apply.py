@@ -5,7 +5,7 @@ def angle_between(v1, v2):
     v2 = v2 / np.linalg.norm(v2)
     return np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0)) * 180 / np.pi
 
-def turn_constraint(path, angle_threshold=10):
+def turn_constraint(path, angle_threshold=30):
     if len(path) < 3:
         return path
     smoothed = [path[0]]
