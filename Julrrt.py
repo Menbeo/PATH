@@ -5,7 +5,6 @@ import random
 import matplotlib.path as Path 
 from gridmap import create_grid_map, grid_map, default_goal,default_start
 from gridmap import convert_grid_to_lat_lon,compute_neighborhood_layers
-
 from convert_to_waypoints import export_waypoints
 # ========== PATH SIMPLIFICATION ==========
 def bresenham_line(x0, y0, x1, y1):
