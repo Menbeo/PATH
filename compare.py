@@ -11,6 +11,7 @@ from probalisitc_road_map import sample_points, connect_nodes, dijkstra as prm_d
 from PSO import particle_swarm_optimization
 
 # ========== Setup CSVs ==========
+
 csv_files = {
     "length": open("path_length.csv", "w", newline=''),
     "time": open("execution_time.csv", "w", newline=''),
@@ -21,6 +22,8 @@ csv_writers = {key: csv.writer(f) for key, f in csv_files.items()}
 for writer in csv_writers.values():
     writer.writerow(["Algorithm", "Map", "Run", "Value"])
 
+
+    
 def memory_usage_MB():
     return psutil.Process().memory_info().rss / 1024**2
 
@@ -90,7 +93,7 @@ for map_id in range(1, 5):
 for f in csv_files.values():
     f.close()
 
-print("\n✅ Done. Data saved in:")
+print("\n Data saved in:")
 print("- path_length.csv")
 print("- execution_time.csv")
 print("- memory_usage.csv")
