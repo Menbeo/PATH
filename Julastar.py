@@ -94,7 +94,15 @@ def astar(grid, start, goal):
             nx, ny = current[0] + dx, current[1] + dy
             neighbor = (nx, ny)
             if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 0:
-                tentative_g = cost + 1
+               
+                if grid[nx][ny] == 1:  
+                    continue  
+                elif grid[nx][ny] == 2:
+                    penalty = 100  
+                else:
+                    penalty = 1  
+
+                tentative_g = cost + penalty
                 if neighbor not in g_score or tentative_g < g_score[neighbor]:
                     g_score[neighbor] = tentative_g
                     f_score = tentative_g + heuristic(neighbor, goal)
