@@ -1,107 +1,93 @@
 import numpy as np
 from scipy import interpolate
+from scipy.spatial import KDTree
+from scipy.ndimage import distance_transform_edt
 
 def angle_between(v1, v2):
     v1 = v1 / np.linalg.norm(v1)
     v2 = v2 / np.linalg.norm(v2)
     return np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0)) * 180 / np.pi
 
-def turn_constraint(path, obstacle_distance, caution_distance=1.0, safe_distance=2.0):
+def turn_constraint(path, grid, min_safe_dist = 2.0, max_safe_dist = 4.0):
     if len(path) < 3:
         return path
-
-    if obstacle_distance <= caution_distance:
-        angle_threshold = 30
-    elif obstacle_distance >= safe_distance:
-        angle_threshold = 45
+    obstacle_indices = np.argwhere(grid == 1)
+    if obstacle_indices.size == 0:
+        obstacle_tree = None
     else:
-        ratio = (obstacle_distance - caution_distance) / (safe_distance - caution_distance)
-        angle_threshold = 30 + ratio * (45 - 30)
+        obstacle_tree = KDTree(obstacle_indices)
 
-    smoothed = [tuple(path[0])]
+    smoothed_path = [path[0]]
+
     for i in range(1, len(path) - 1):
-        v1 = np.array(path[i]) - np.array(path[i - 1])
-        v2 = np.array(path[i + 1]) - np.array(path[i])
-        angle = angle_between(v1, v2)
-        if angle > angle_threshold:
-            smoothed.append(tuple(path[i]))
-    smoothed.append(tuple(path[-1]))
-    return smoothed
-
-def is_point_safe(point, grid):
-    # keep the same indexing convention as your older code:
-    # point = (x, y) where grid is indexed as grid[y, x]
-    x, y = int(round(point[0])), int(round(point[1]))
-    height, width = grid.shape
-    if 0 <= y < height and 0 <= x < width:
-        return grid[y, x] == 0  # 0 = free, 1 = obstacle
-    return False
-
-def nearest_safe_point(point, grid, max_radius=5):
-    """Find nearest free cell to 'point' by increasing Manhattan radius.
-       Returns float (x,y) of the free cell center or None if not found."""
-    cx = int(round(point[0]))
-    cy = int(round(point[1]))
-    height, width = grid.shape
-
-    for r in range(max_radius + 1):
-        # iterate over square ring of radius r
-        for dx in range(-r, r + 1):
-            for dy in range(-r, r + 1):
-                if abs(dx) != r and abs(dy) != r and r != 0:
-                    # skip inner points when r>0 to only check the ring
-                    continue
-                nx = cx + dx
-                ny = cy + dy
-                if 0 <= ny < height and 0 <= nx < width and grid[ny, nx] == 0:
-                    return (float(nx), float(ny))
-    return None
-
-def bspline_smooth(path, grid, smoothing_factor=None, num_points=250, max_clamp_radius=4):
-   
-    path = np.array(path, dtype=float)
-    if len(path) < 3:
-        return path
-
-    x = path[:, 0]
-    y = path[:, 1]
-    k = min(3, len(path) - 1)
-
-    if smoothing_factor is None:
-        # Allow more deviation from original points; tweak multiplier to taste
-        smoothing_factor = len(path) * 12.0
-
-    # Fit B-spline
-    try:
-        tck, _ = interpolate.splprep([x, y], s=smoothing_factor, k=k)
-    except Exception as e:
-        # fallback: return original path if fitting fails
-        return path
-
-    # Evaluate spline densely
-    u_fine = np.linspace(0, 1, num_points)
-    x_fine, y_fine = interpolate.splev(u_fine, tck)
-
-    smooth_path = []
-    for pt in zip(x_fine, y_fine):
-        if is_point_safe(pt, grid):
-            smooth_path.append((float(pt[0]), float(pt[1])))
+        current_point = path[i]
+        
+        if obstacle_tree:
+            dist_to_obstacle, _ = obstacle_tree.query(current_point)
         else:
-            # clamp to nearest free cell (if found)
-            ns = nearest_safe_point(pt, grid, max_radius=max_clamp_radius)
-            if ns is not None:
-                smooth_path.append(ns)
-            else:
-                # if no nearby free cell found, fall back to last safe sample or original rounded point
-                if smooth_path:
-                    smooth_path.append(smooth_path[-1])
-                else:
-                    smooth_path.append((float(round(pt[0])), float(round(pt[1]))))
+            dist_to_obstacle = max_safe_dist + 1 # Effectively infinite distance
 
-    # remove consecutive duplicates (exact floats) which may create sharp discrete steps
-    dedup = []
-    for p in smooth_path:
-        if not dedup or (abs(dedup[-1][0] - p[0]) > 1e-6 or abs(dedup[-1][1] - p[1]) > 1e-6):
-            dedup.append(p)
+        # Dynamically set the angle threshold based on obstacle proximity.
+        if dist_to_obstacle <= min_safe_dist:
+            # Very close to an obstacle, require a sharp turn.
+            angle_threshold = 30  # Stricter angle
+        elif dist_to_obstacle >= max_safe_dist:
+            # Far from any obstacle, allow a very smooth, wide turn.
+            angle_threshold = 45  # More lenient angle
+        else:
+            # Linearly interpolate the angle threshold based on distance.
+            ratio = (dist_to_obstacle - min_safe_dist) / (max_safe_dist - min_safe_dist)
+            angle_threshold = 30 + ratio * (45 - 30)
 
-    return np.array(dedup)
+        # Calculate the angle of the turn at the current waypoint.
+        v1 = np.array(path[i]) - np.array(path[i-1])
+        v2 = np.array(path[i+1]) - np.array(path[i])
+
+        # A zero vector can occur if points are duplicated.
+        if np.linalg.norm(v1) == 0 or np.linalg.norm(v2) == 0:
+            continue
+
+        turn_angle = angle_between(v1, v2)
+
+        # If the turn is sharp enough given the obstacle proximity, keep the point.
+        if turn_angle > angle_threshold:
+            smoothed_path.append(path[i])
+
+    smoothed_path.append(path[-1])
+    return smoothed_path
+
+
+
+def bspline_smooth(waypoints, grid, num_points=200, degree=3):
+   
+    if len(waypoints) <= degree:
+        return waypoints # Not enough points to create a spline of the given degree
+    
+    distance_map = distance_transform_edt(grid == 0)
+
+    x, y = zip(*waypoints)
+
+    # Adding more knots can help the spline follow the path more closely.
+    tck, u = interpolate.splprep([x, y], s=0, k=degree)
+    
+    unew = np.linspace(0, 1, num_points)
+    smooth_points = interpolate.splev(unew, tck)
+    
+    smoothed_path = []
+    for i in range(num_points):
+        px, py = smooth_points[0][i], smooth_points[1][i]
+        
+        # Ensure the point is within the grid boundaries
+        if not (0 <= px < grid.shape[0] and 0 <= py < grid.shape[1]):
+            continue
+
+        # Check for collision at the grid cell of the smoothed point
+        if grid[int(px), int(py)] == 1:
+            # If there is a collision, you could implement a more sophisticated
+            # collision avoidance strategy, but for now, we just skip the point.
+            # This is a simplification. A better method would be to find the nearest safe point.
+            continue
+            
+        smoothed_path.append((px, py))
+
+    return smoothed_path
