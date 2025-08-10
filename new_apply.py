@@ -46,7 +46,7 @@ def bspline_smooth(path, grid, smoothing_factor=None, num_points=100):
     k = min(3, len(path) - 1)
 
     if smoothing_factor is None:
-        smoothing_factor = len(path) * 2.0
+        smoothing_factor = len(path) * 8.0
 
     # Fit B-spline
     tck, _ = interpolate.splprep([x, y], s=smoothing_factor, k=k)
