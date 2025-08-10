@@ -11,7 +11,7 @@ def turn_constraint(path, obstacle_distance, caution_distance=1.0, safe_distance
     
     # Determine dynamic angle threshold
     if obstacle_distance <= caution_distance:
-        angle_threshold = 5
+        angle_threshold = 1
     elif obstacle_distance >= safe_distance:
         angle_threshold = 10
     else:
@@ -28,7 +28,7 @@ def turn_constraint(path, obstacle_distance, caution_distance=1.0, safe_distance
     smoothed.append(path[-1])
     return smoothed
 
-def bspline_smooth(path, smoothing_factor=3.0, num_points=50):
+def bspline_smooth(path, smoothing_factor=3.0, num_points=10):
     path = np.array(path, dtype=float)
     if len(path) < 3:
         return path
