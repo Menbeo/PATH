@@ -57,7 +57,7 @@ if __name__ == "__main__":
    
     for map_id in range(1, 5):
         grid = grid_map(map_id=map_id)
-        inflation = compute_neighborhood_layers(grid, inflation_radius=1.0, meters_per_cell=0.5)
+        inflation = compute_neighborhood_layers(grid)
         path = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
 
         if not path:

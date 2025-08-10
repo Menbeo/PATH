@@ -6,6 +6,7 @@ import matplotlib.path as Path
 from gridmap import create_grid_map, grid_map, default_goal,default_start
 from gridmap import convert_grid_to_lat_lon,compute_neighborhood_layers
 from convert_to_waypoints import export_waypoints
+from new_apply import bspline_smooth
 # ========== PATH SIMPLIFICATION ==========
 def bresenham_line(x0, y0, x1, y1):
     points = []
@@ -85,8 +86,8 @@ def rrt(grid, inflation, start, goal, max_iter=3000, step_size=2.0, goal_sample_
                     while current is not None:
                         path.append(current)
                         current = parents[current]
-                    return path[::-1],node_expand
-    return None,node_expand
+                    return path[::-1]
+    return None
 
 
 
@@ -97,10 +98,11 @@ if __name__ == "__main__":
         grid = grid_map(map_id=map_id)
         inflation = compute_neighborhood_layers(grid)
         path = rrt(grid, inflation, default_start, default_goal)
+        smooth = bspline_smooth(path,grid, inflation)
         if path:
-            print(f"Original path length: {len(path)}")
+            print(f"Original path length: {len(smooth)}")
             # simplify_pathhe = simplify_path(grid,path)
-            create_grid_map(grid, path)
+            create_grid_map(grid, smooth)
             lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in path]
             filename = f"RRT{map_id}.waypoints"
             export_waypoints(lat_lon_path, filename=filename)

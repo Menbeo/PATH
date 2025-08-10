@@ -5,6 +5,8 @@ import numpy as np
 import random 
 import math 
 import networkx as nx 
+from new_apply import bspline_smooth
+
 
 def is_free(x, y, grid):
     x = int(x)
@@ -106,13 +108,14 @@ if __name__ == "__main__":
         try:
             path_idx = dijkstra(graph, start_idx, goal_idx)
             path = [samples[i] for i in path_idx]
+            smooth = bspline_smooth(path, grid, inflation)
             lat_lon_path = [
-                    convert_grid_to_lat_lon(point_y, point_x) for point_x, point_y in path
+                    convert_grid_to_lat_lon(point_y, point_x) for point_x, point_y in smooth
                 ]
             filename = f"PRM_map{4}.waypoints"
             export_waypoints(lat_lon_path, filename=filename, default_altitude=100)
              
-            create_grid_map(grid,path)
+            create_grid_map(grid,smooth)
 
         except nx.NetworkXNoPath:
             print("No path found")
