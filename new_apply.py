@@ -58,7 +58,7 @@ def nearest_safe_point(point, grid, max_radius=5):
     return None
 
 def bspline_smooth(path, grid, smoothing_factor=None, num_points=250, max_clamp_radius=4):
-    """B-spline smoothing that clamps spline sample points to nearest free grid cell instead of aborting."""
+   
     path = np.array(path, dtype=float)
     if len(path) < 3:
         return path
