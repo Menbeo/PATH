@@ -16,7 +16,7 @@ def turn_constraint(path, obstacle_distance, caution_distance=1.0, safe_distance
         angle_threshold = 30
     else:
         ratio = (obstacle_distance - caution_distance) / (safe_distance - caution_distance)
-        angle_threshold = 30 + ratio * (45 - 30)
+        angle_threshold = 10 + ratio * (30 - 10)
 
     smoothed = [path[0]]
     for i in range(1, len(path) - 1):
