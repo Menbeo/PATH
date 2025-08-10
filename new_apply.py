@@ -36,7 +36,7 @@ def is_point_safe(point, grid):
         return grid[y, x] == 0  # 0 = free, 1 = obstacle
     return False
 
-def bspline_smooth(path, grid, smoothing_factor=None, num_points=50):
+def bspline_smooth(path, grid, smoothing_factor=None, num_points=10):
     path = np.array(path, dtype=float)
     if len(path) < 3:
         return path
@@ -46,7 +46,7 @@ def bspline_smooth(path, grid, smoothing_factor=None, num_points=50):
     k = min(3, len(path) - 1)
 
     if smoothing_factor is None:
-        smoothing_factor = len(path) * 8.0
+        smoothing_factor = len(path) * 2.0
 
     # Fit B-spline
     tck, _ = interpolate.splprep([x, y], s=smoothing_factor, k=k)
