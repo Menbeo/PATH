@@ -116,19 +116,44 @@ if __name__ == "__main__":
         print(f"Displaying Map {map_id}")
         grid = grid_map(map_id=map_id)
         path = astar(grid, default_start, default_goal)
-        if path:
-            # print(f"Original path length: {len(path)}")
-            simplified_path = simplify_path(grid, path)
-            round_path = bspline_smooth(simplified_path, grid)
+#         if path:
+#             # print(f"Original path length: {len(path)}")
+#             simplified_path = simplify_path(grid, path)
+#             round_path = bspline_smooth(simplified_path, grid)
 
-            # print(f"Simplified path length: {len(simplified_path)}")
-            smooth_with_constraints = turn_constraint(round_path, obstacle_distance=1)
+#             # print(f"Simplified path length: {len(simplified_path)}")
+#             smooth_with_constraints = turn_constraint(round_path, obstacle_distance=1)
 
-            create_grid_map(grid, [(int(x), int(y)) for (x, y) in smooth_with_constraints])
+#             create_grid_map(grid, [(int(x), int(y)) for (x, y) in smooth_with_constraints])
 
-            # lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in simplified_path_corner]
-            # filename = f"A_star{map_id}.waypoints"
-            # export_waypoints(lat_lon_path, filename=filename)
-        else:
-            print("No path found.")
-            create_grid_map(grid)
+#             # lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in simplified_path_corner]
+#             # filename = f"A_star{map_id}.waypoints"
+#             # export_waypoints(lat_lon_path, filename=filename)
+#         else:
+#             print("No path found.")
+#             create_grid_map(grid)
+
+
+if path:
+    simplified_path = simplify_path(grid, path)
+
+    # 1) smooth first with bspline (clamping will prevent abort)
+    round_path = bspline_smooth(simplified_path, grid,
+                               smoothing_factor=len(simplified_path) * 12.0,
+                               num_points=300,
+                               max_clamp_radius=4)
+
+    # 2) then apply angle-based constraint (this prunes unnecessary corners from the smooth curve)
+    smooth_with_constraints = turn_constraint(round_path, obstacle_distance=1)
+
+    # 3) optional: resample final path to remove tiny wiggles (pick every Nth point or use a small-distance filter)
+    final = []
+    last = None
+    min_sep = 0.5  # minimum distance between consecutive points (tweak)
+    for p in smooth_with_constraints:
+        px, py = float(p[0]), float(p[1])
+        if last is None or ((px - last[0])**2 + (py - last[1])**2) >= (min_sep**2):
+            final.append((int(round(px)), int(round(py))))
+            last = (px, py)
+
+    create_grid_map(grid, final)
