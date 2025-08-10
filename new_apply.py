@@ -23,55 +23,29 @@ def angle_between(v1, v2):
 #     return smoothed
 
 
-def bspline_smooth(waypoints, grid, num_points=200, degree=3, smoothing_factor=None, inflation_radius=3):
-    
-    if len(waypoints) <= degree:
-        return waypoints  # Not enough points for the spline
-
-    if smoothing_factor is None:
-        smoothing_factor = len(waypoints)
+def bspline_smooth(waypoints, grid, inflated_grid=None, num_points=200, degree=3, smoothing_factor=None):
+    if len(waypoints) <= degree: return waypoints
+    if smoothing_factor is None: smoothing_factor = len(waypoints)
 
     x, y = zip(*waypoints)
-    tck, u = interpolate.splprep([x, y], s=smoothing_factor, k=degree)
+    tck, _ = interpolate.splprep([x, y], s=smoothing_factor, k=degree)
     unew = np.linspace(0, 1, num_points)
-    initial_smooth_points = interpolate.splev(unew, tck)
+    pts = interpolate.splev(unew, tck)
 
-    inv_grid = (grid == 1)
-    distance_map_to_free = distance_transform_edt(inv_grid == 0)
+    mask = inflated_grid if inflated_grid is not None else grid
+    dist_map = distance_transform_edt(mask == 0)
+    gy, gx = np.gradient(dist_map)
 
+    path = []
+    h, w = grid.shape
+    for px, py in zip(*pts):
+        c, r = int(np.clip(px, 0, w - 1)), int(np.clip(py, 0, h - 1))
+        if mask[r, c]:
+            d, dx, dy = dist_map[r, c], gx[r, c], gy[r, c]
+            if dx or dy:
+                dir = np.array([-dx, -dy]) / np.linalg.norm([dx, dy])
+                px += dir[0] * d * 1.1
+                py += dir[1] * d * 1.1
+        path.append((px, py))
+    return path
 
-    inflated_obstacles = distance_map_to_free <= inflation_radius
-    grad_y, grad_x = np.gradient(distance_map_to_free)
-    smoothed_path = []
-    grid_height, grid_width = grid.shape
-
-    for i in range(num_points):
-        px, py = initial_smooth_points[0][i], initial_smooth_points[1][i]
-        p_col = int(np.clip(px, 0, grid_width - 1))
-        p_row = int(np.clip(py, 0, grid_height - 1))
-
-        dist = distance_map_to_free[p_row, p_col]
-        g_y = grad_y[p_row, p_col]
-        g_x = grad_x[p_row, p_col]
-
-        if g_y != 0 or g_x != 0:
-            direction = np.array([-g_x, -g_y]) / np.linalg.norm([g_x, g_y])
-        else:
-            direction = None
-
-        # 1. If inside obstacle → push out strongly
-        if grid[p_row, p_col] == 1 and direction is not None:
-            px += direction[0] * dist * 1.1
-            py += direction[1] * dist * 1.1
-
-        # 2. If in inflated "danger zone" → apply softer penalty away from obstacle
-        elif inflated_obstacles[p_row, p_col] and direction is not None:
-            penalty_strength = (inflation_radius - dist) / inflation_radius # 0 → far edge, 1 → close
-            
-            push_amount = (penalty_strength * penalty_strength) / 1_000_000  # normalize huge cost
-            px += direction[0] * push_amount
-            py += direction[1] * push_amount
-
-        smoothed_path.append((px, py))
-
-    return smoothed_path

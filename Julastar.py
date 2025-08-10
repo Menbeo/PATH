@@ -8,6 +8,8 @@ from convert_to_waypoints import export_waypoints
 from gridmap import convert_grid_to_lat_lon
 from gridmap import create_grid_map, grid_map, default_goal,default_start
 from new_apply import bspline_smooth
+from gridmap import compute_neighborhood_layers
+
 
 def bresenham_line(x0, y0, x1, y1):
     """Generate points along a straight line from (x0, y0) to (x1, y1) using Bresenham's algorithm."""
@@ -66,15 +68,18 @@ def simplify_path(grid, path):
 def heuristic(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])  # Manhattan distance
 
-def astar(grid, start, goal):
+def astar(grid, start, goal, inflated_grid=None, inflation_penalty=1_000_000):
     rows, cols = grid.shape
+
+    if inflated_grid is None:
+        inflated_grid = np.zeros_like(grid)  # No inflation if not provided
+
     open_set = []
-    heapq.heappush(open_set, (0 + heuristic(start, goal), 0, start, None))
-    
+    heapq.heappush(open_set, (heuristic(start, goal), 0, start, None))
+
     came_from = {}
     g_score = {start: 0}
     visited = set()
-    
 
     while open_set:
         _, cost, current, parent = heapq.heappop(open_set)
@@ -83,6 +88,7 @@ def astar(grid, start, goal):
             continue
         visited.add(current)
         came_from[current] = parent
+
         if current == goal:
             path = []
             while current:
@@ -90,12 +96,18 @@ def astar(grid, start, goal):
                 current = came_from[current]
             return path[::-1]
 
-        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+        for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
             nx, ny = current[0] + dx, current[1] + dy
             neighbor = (nx, ny)
-            if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 0:
 
-                tentative_g = cost + 1
+            if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 0:
+                # Apply penalty if in inflated zone
+                if inflated_grid[nx, ny] == 1:
+                    layer_cost = inflation_penalty
+                else:
+                    layer_cost = 1
+
+                tentative_g = cost + layer_cost
                 if neighbor not in g_score or tentative_g < g_score[neighbor]:
                     g_score[neighbor] = tentative_g
                     f_score = tentative_g + heuristic(neighbor, goal)
@@ -105,17 +117,19 @@ def astar(grid, start, goal):
 
 
 
+
 # ========== MAIN ==========
 if __name__ == "__main__":
     for map_id in range(1,5):
         print(f"Displaying Map {map_id}")
         grid = grid_map(map_id=map_id)
-        path = astar(grid, default_start, default_goal)
+        inflated_grid = compute_neighborhood_layers(grid, inflation_radius=3, meters_per_cell=1.0)
+        path = astar(grid, default_start, default_goal, inflated_grid)
         if path:
             # print(f"Original path length: {len(path)}")
             simplified_path = simplify_path(grid, path)
             # smooth_with_constraints = smooth_path(simplified_path,angle_threshold = 30)
-            round_path = bspline_smooth(simplified_path, grid, num_points=200)
+            round_path = bspline_smooth(simplified_path, grid, inflated_grid)
 
             # print(f"Simplified path length: {len(simplified_path)}")
            
