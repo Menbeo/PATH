@@ -102,8 +102,8 @@ def astar(grid, start, goal, inflated_grid=None):
 
             if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 0:
                 # Apply penalty if in inflated zone
-                if inflated_grid[nx, ny] != 1:
-                    layer_cost = 1e6
+                if inflated_grid[nx, ny] == 1:
+                    layer_cost = 1_000_000
                 else:
                     layer_cost = 1
 
