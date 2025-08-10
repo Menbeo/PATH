@@ -1,19 +1,6 @@
 import numpy as np
 from scipy import interpolate
-#check if collision wwith obstacle 
-def is_collision_free(path, grid):
-    height, width = grid.shape
-    for i in range(len(path) - 1):
-        p1 = path[i]
-        p2 = path[i + 1]
-        num_samples = int(np.linalg.norm(np.array(p2) - np.array(p1)) * 10)
-        for t in np.linspace(0, 1, num_samples):
-            x = int(round(p1[0] + (p2[0] - p1[0]) * t))
-            y = int(round(p1[1] + (p2[1] - p1[1]) * t))
-            if 0 <= y < height and 0 <= x < width:
-                if grid[y, x] == 1:
-                    return False
-    return True
+
 def angle_between(v1, v2):
     v1 = v1 / np.linalg.norm(v1)
     v2 = v2 / np.linalg.norm(v2)
@@ -43,13 +30,15 @@ def turn_constraint(path, obstacle_distance, caution_distance=1.0, safe_distance
     return smoothed
 
 def is_point_safe(point, grid):
+    """Check if a point is in free space."""
     x, y = int(round(point[0])), int(round(point[1]))
-    h, w = grid.shape
-    if 0 <= y < h and 0 <= x < w:
-        return grid[y, x] == 0
+    height, width = grid.shape
+    if 0 <= y < height and 0 <= x < width:
+        return grid[y, x] == 0  # 0 = free, 1 = obstacle
     return False
 
-def bspline_smooth(path, smoothing_factor=3.0, num_points=10, grid):
+def bspline_smooth(path, grid, smoothing_factor=None, num_points=100):
+    """Smooth a path using B-spline while avoiding obstacles."""
     path = np.array(path, dtype=float)
     if len(path) < 3:
         return path
@@ -61,7 +50,10 @@ def bspline_smooth(path, smoothing_factor=3.0, num_points=10, grid):
     if smoothing_factor is None:
         smoothing_factor = len(path) * 2.0
 
+    # Fit B-spline
     tck, _ = interpolate.splprep([x, y], s=smoothing_factor, k=k)
+
+    # Evaluate spline
     u_fine = np.linspace(0, 1, num_points)
     x_fine, y_fine = interpolate.splev(u_fine, tck)
 
@@ -70,7 +62,8 @@ def bspline_smooth(path, smoothing_factor=3.0, num_points=10, grid):
         if is_point_safe(pt, grid):
             smooth_path.append(pt)
         else:
-            # Stop smoothing if collision is found — fallback to original
-            return np.array(path)
+            # Collision detected → return original path
+            return path
 
     return np.array(smooth_path)
+
