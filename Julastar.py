@@ -7,7 +7,7 @@ import heapq
 from convert_to_waypoints import export_waypoints
 from gridmap import convert_grid_to_lat_lon
 from gridmap import create_grid_map, grid_map, default_goal,default_start
-from new_apply import turn_constraint, bspline_smooth,is_collision_free
+from new_apply import turn_constraint, bspline_smooth
 
 def bresenham_line(x0, y0, x1, y1):
     """Generate points along a straight line from (x0, y0) to (x1, y1) using Bresenham's algorithm."""
@@ -121,10 +121,9 @@ if __name__ == "__main__":
             simplified_path = simplify_path(grid, path)
             simplified_path_corner = turn_constraint(simplified_path, obstacle_distance= 1)
             round_path = bspline_smooth(simplified_path_corner)
-            if not is_collision_free(round_path, grid):
-                    print("Collision detected! Using original path instead.")
+
             # print(f"Simplified path length: {len(simplified_path)}")
-                    create_grid_map(grid, [(int(x), int(y)) for (x,y) in round_path])
+            create_grid_map(grid, [(int(x), int(y)) for (x,y) in round_path])
             # lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in simplified_path_corner]
             # filename = f"A_star{map_id}.waypoints"
             # export_waypoints(lat_lon_path, filename=filename)

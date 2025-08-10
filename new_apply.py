@@ -30,7 +30,6 @@ def turn_constraint(path, obstacle_distance, caution_distance=1.0, safe_distance
     return smoothed
 
 def is_point_safe(point, grid):
-    """Check if a point is in free space."""
     x, y = int(round(point[0])), int(round(point[1]))
     height, width = grid.shape
     if 0 <= y < height and 0 <= x < width:
@@ -38,7 +37,6 @@ def is_point_safe(point, grid):
     return False
 
 def bspline_smooth(path, grid, smoothing_factor=None, num_points=100):
-    """Smooth a path using B-spline while avoiding obstacles."""
     path = np.array(path, dtype=float)
     if len(path) < 3:
         return path
@@ -62,8 +60,7 @@ def bspline_smooth(path, grid, smoothing_factor=None, num_points=100):
         if is_point_safe(pt, grid):
             smooth_path.append(pt)
         else:
-            # Collision detected → return original path
+            # If hit obstacle, stop smoothing and use original path
             return path
 
     return np.array(smooth_path)
-
