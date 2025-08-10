@@ -28,7 +28,7 @@ def turn_constraint(path, obstacle_distance, caution_distance=1.0, safe_distance
     smoothed.append(path[-1])
     return smoothed
 
-def bspline_smooth(path, smoothing_factor=None, num_points=300):
+def bspline_smooth(path, smoothing_factor=None, num_points=800):
     path = np.array(path, dtype=float)
     if len(path) < 3:
         return path
