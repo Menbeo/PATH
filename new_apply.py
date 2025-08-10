@@ -24,7 +24,7 @@ def angle_between(v1, v2):
 
 
 
-def bspline_smooth(waypoints, grid, num_points=200, degree=3, smoothing_factor=None,penalty_strength = 0.1, meters_per_cell = 1.0, inflation_radius = 1.8):
+def bspline_smooth(waypoints, grid, num_points=200, degree=3, smoothing_factor=None,penalty_strength = 0.1, meters_per_cell = 1.0, inflation_radius = 2.0):
     
     if len(waypoints) <= degree:
         return waypoints  # Not enough points for the spline

@@ -117,7 +117,7 @@ if __name__ == "__main__":
             # print(f"Original path length: {len(path)}")
             simplified_path = simplify_path(grid, path)
             # smooth_with_constraints = smooth_path(simplified_path,angle_threshold = 30)
-            round_path = bspline_smooth(simplified_path, grid, num_points=100)
+            round_path = bspline_smooth(simplified_path, grid, num_points=200,)
 
             # print(f"Simplified path length: {len(simplified_path)}")
            
