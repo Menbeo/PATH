@@ -11,9 +11,9 @@ def turn_constraint(path, obstacle_distance, caution_distance=1.0, safe_distance
     
     # Determine dynamic angle threshold
     if obstacle_distance <= caution_distance:
-        angle_threshold = 30
+        angle_threshold = 10
     elif obstacle_distance >= safe_distance:
-        angle_threshold = 45
+        angle_threshold = 30
     else:
         ratio = (obstacle_distance - caution_distance) / (safe_distance - caution_distance)
         angle_threshold = 30 + ratio * (45 - 30)
