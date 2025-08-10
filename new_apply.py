@@ -36,7 +36,7 @@ def is_point_safe(point, grid):
         return grid[y, x] == 0  # 0 = free, 1 = obstacle
     return False
 
-def bspline_smooth(path, grid, smoothing_factor=None, num_points=100):
+def bspline_smooth(path, grid, smoothing_factor=None, num_points=50):
     path = np.array(path, dtype=float)
     if len(path) < 3:
         return path

@@ -123,7 +123,7 @@ if __name__ == "__main__":
             simplified_path_corner = turn_constraint(round_path, obstacle_distance= 1)
 
             # print(f"Simplified path length: {len(simplified_path)}")
-            create_grid_map(grid, [(int(x), int(y)) for (x,y) in simplified_path_corner])
+            create_grid_map(grid,  simplified_path_corner)
             # lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in simplified_path_corner]
             # filename = f"A_star{map_id}.waypoints"
             # export_waypoints(lat_lon_path, filename=filename)
