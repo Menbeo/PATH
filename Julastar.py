@@ -96,9 +96,7 @@ def astar(grid, start, goal):
             if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 0:
                
                 if grid[nx][ny] == 1:  
-                    continue  
-                elif grid[nx][ny] == 2:
-                    penalty = 100  
+                    penalty = 1_000_000 
                 else:
                     penalty = 1  
 
