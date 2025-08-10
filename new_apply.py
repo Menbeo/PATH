@@ -1,17 +1,17 @@
 import numpy as np
 from scipy import interpolate
 #check if collision wwith obstacle 
-def is_collision_free(path, grid_map):
+def is_collision_free(path, grid):
+    height, width = grid.shape
     for i in range(len(path) - 1):
         p1 = path[i]
         p2 = path[i + 1]
-        # Sample points between p1 and p2
         num_samples = int(np.linalg.norm(np.array(p2) - np.array(p1)) * 10)
         for t in np.linspace(0, 1, num_samples):
             x = int(round(p1[0] + (p2[0] - p1[0]) * t))
             y = int(round(p1[1] + (p2[1] - p1[1]) * t))
-            if 0 <= y < len(grid_map) and 0 <= x < len(grid_map[0]):
-                if grid_map[y][x] == 1:  # obstacle
+            if 0 <= y < height and 0 <= x < width:
+                if grid[y, x] == 1:
                     return False
     return True
 def angle_between(v1, v2):
