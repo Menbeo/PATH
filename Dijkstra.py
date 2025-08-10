@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import heapq
 from convert_to_waypoints import export_waypoints
+from new_apply import bspline_smooth
 
 def Dijkstra(grid, start, goal, inflation_layer=None):
     rows, cols = grid.shape
@@ -61,7 +62,7 @@ if __name__ == "__main__":
         inflation = compute_neighborhood_layers(grid, inflation_radius=1.8, meters_per_cell=1.0)
 
         # Use original grid for obstacles, and inflation as layer cost
-        path = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
+        path,_ = Dijkstra(grid, default_start, default_goal, inflation_layer=inflation)
 
         if not path:
             print(f"Map {map_id}: No path found")

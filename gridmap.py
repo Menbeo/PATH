@@ -144,8 +144,8 @@ def grid_map(map_id=1, size=50):
                    (42, 8), (42, 25), (42, 42),
                    (15, 35)]
         shapes = [("circle", 2), ("diamond", 3), ("rhombus", (4, 3)),
-                  ("rectangle", (7, 7)), ("diamond", 2), ("rhombus", (3, 3)),
-                  ("circle", 5), ("rectangle", (6, 6)), ("rhombus", (2, 2)),
+                  ("rectangle", (7, 7)), ("diamond", 2), ("rhombus", (3, 5)),
+                  ("circle", 5), ("rectangle", (7, 7)), ("rhombus", (2, 2)),
                   ("circle", 3)]
         for (cx, cy), (shape, param) in zip(centers, shapes):
             if shape == "circle":
@@ -222,12 +222,12 @@ def grid_map(map_id=1, size=50):
         grid[30:45, 30:50] = 1
         grid[5:20, 35:53] = 1
         #Complex shaped
-        plot_circle(grid, center=(10,30), radius=2) #Different degree
+        plot_circle(grid, center=(10,30), radius=3) #Different degree
         plot_circle(grid, center=(45,20), radius=6)
         plot_cluster(grid, (40,5), size = 100)
         plot_diamond(grid, (25,35), 6)
         plot_rhombus(grid, (25,5), 4, 5)
-        plot_rhombus(grid,(30,16), 9, 9)
+        plot_rhombus(grid,(30,16), 9, 10)
 
     return grid
 

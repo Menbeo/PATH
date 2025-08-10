@@ -126,18 +126,18 @@ if __name__ == "__main__":
         inflated_grid = compute_neighborhood_layers(grid, inflation_radius=3, meters_per_cell=1.0)
         path = astar(grid, default_start, default_goal, inflated_grid, inflation_penalty=5000)
         if path:
-            # print(f"Original path length: {len(path)}")
+            print(f"Original path length: {len(path)}")
             simplified_path = simplify_path(grid, path)
             # smooth_with_constraints = smooth_path(simplified_path,angle_threshold = 30)
             round_path = bspline_smooth(simplified_path, grid, inflated_grid)
 
-            # print(f"Simplified path length: {len(simplified_path)}")
+            print(f"Simplified path length: {len(round_path)}")
            
             create_grid_map(grid,  round_path)
 
-            # lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in simplified_path_corner]
-            # filename = f"A_star{map_id}.waypoints"
-            # export_waypoints(lat_lon_path, filename=filename)
+            lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in round_path]
+            filename = f"A_star{map_id}.waypoints"
+            export_waypoints(lat_lon_path, filename=filename)
         else:
             print("No path found.")
             create_grid_map(grid)
