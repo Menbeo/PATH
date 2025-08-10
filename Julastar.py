@@ -98,7 +98,7 @@ def astar(grid, start, goal):
                 if grid[nx][ny] == 1:  
                     penalty = 1_000_000 
                 else:
-                    penalty = 1  
+                    penalty = 10  
 
                 tentative_g = cost + penalty
                 if neighbor not in g_score or tentative_g < g_score[neighbor]:
