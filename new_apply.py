@@ -12,12 +12,12 @@ def turn_constraint(path, obstacle_distance, caution_distance=1.0, safe_distance
     
     # Determine dynamic angle threshold
     if obstacle_distance <= caution_distance:
-        angle_threshold = 30
+        angle_threshold = 10
     elif obstacle_distance >= safe_distance:
         angle_threshold = 45
     else:
         ratio = (obstacle_distance - caution_distance) / (safe_distance - caution_distance)
-        angle_threshold = 30 + ratio * (45 - 30)
+        angle_threshold = 10 + ratio * (45 - 10)
 
     smoothed = [path[0]]
     for i in range(1, len(path) - 1):
@@ -36,7 +36,7 @@ def is_point_safe(point, grid):
         return grid[y, x] == 0  # 0 = free, 1 = obstacle
     return False
 
-def bspline_smooth(path, grid, smoothing_factor=None, num_points=10):
+def bspline_smooth(path, grid, smoothing_factor=None, num_points= 200):
     path = np.array(path, dtype=float)
     if len(path) < 3:
         return path
@@ -46,7 +46,7 @@ def bspline_smooth(path, grid, smoothing_factor=None, num_points=10):
     k = min(3, len(path) - 1)
 
     if smoothing_factor is None:
-        smoothing_factor = len(path) * 2.0
+        smoothing_factor = len(path) * 8.0
 
     # Fit B-spline
     tck, _ = interpolate.splprep([x, y], s=smoothing_factor, k=k)
