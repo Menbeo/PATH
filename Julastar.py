@@ -120,7 +120,7 @@ if __name__ == "__main__":
             # print(f"Original path length: {len(path)}")
             simplified_path = simplify_path(grid, path)
             simplified_path_corner = turn_constraint(simplified_path, obstacle_distance= 1)
-            round_path = bspline_smooth(simplified_path_corner)
+            round_path = bspline_smooth(simplified_path_corner, grid)
 
             # print(f"Simplified path length: {len(simplified_path)}")
             create_grid_map(grid, [(int(x), int(y)) for (x,y) in round_path])
