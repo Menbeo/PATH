@@ -94,8 +94,6 @@ def astar(grid, start, goal):
             nx, ny = current[0] + dx, current[1] + dy
             neighbor = (nx, ny)
             if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 0:
-               
-
 
                 tentative_g = cost + 1
                 if neighbor not in g_score or tentative_g < g_score[neighbor]:
@@ -117,7 +115,7 @@ if __name__ == "__main__":
             # print(f"Original path length: {len(path)}")
             simplified_path = simplify_path(grid, path)
             # smooth_with_constraints = smooth_path(simplified_path,angle_threshold = 30)
-            round_path = bspline_smooth(simplified_path, grid, num_points=200,)
+            round_path = bspline_smooth(simplified_path, grid, num_points=200)
 
             # print(f"Simplified path length: {len(simplified_path)}")
            
