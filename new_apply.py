@@ -42,7 +42,14 @@ def turn_constraint(path, obstacle_distance, caution_distance=1.0, safe_distance
     smoothed.append(path[-1])
     return smoothed
 
-def bspline_smooth(path, smoothing_factor=3.0, num_points=10):
+def is_point_safe(point, grid):
+    x, y = int(round(point[0])), int(round(point[1]))
+    h, w = grid.shape
+    if 0 <= y < h and 0 <= x < w:
+        return grid[y, x] == 0
+    return False
+
+def bspline_smooth(path, smoothing_factor=3.0, num_points=10, grid):
     path = np.array(path, dtype=float)
     if len(path) < 3:
         return path
@@ -51,8 +58,19 @@ def bspline_smooth(path, smoothing_factor=3.0, num_points=10):
     y = path[:, 1]
     k = min(3, len(path) - 1)
 
+    if smoothing_factor is None:
+        smoothing_factor = len(path) * 2.0
+
     tck, _ = interpolate.splprep([x, y], s=smoothing_factor, k=k)
     u_fine = np.linspace(0, 1, num_points)
     x_fine, y_fine = interpolate.splev(u_fine, tck)
 
-    return np.column_stack((x_fine, y_fine))
+    smooth_path = []
+    for pt in zip(x_fine, y_fine):
+        if is_point_safe(pt, grid):
+            smooth_path.append(pt)
+        else:
+            # Stop smoothing if collision is found — fallback to original
+            return np.array(path)
+
+    return np.array(smooth_path)

@@ -121,11 +121,10 @@ if __name__ == "__main__":
             simplified_path = simplify_path(grid, path)
             simplified_path_corner = turn_constraint(simplified_path, obstacle_distance= 1)
             round_path = bspline_smooth(simplified_path_corner)
-            if not is_collision_free(round_path, grid_map):
+            if not is_collision_free(round_path, grid):
                     print("Collision detected! Using original path instead.")
-                    round_path = simplified_path_corner
             # print(f"Simplified path length: {len(simplified_path)}")
-            create_grid_map(grid, [(int(x), int(y)) for (x,y) in round_path])
+                    create_grid_map(grid, [(int(x), int(y)) for (x,y) in round_path])
             # lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in simplified_path_corner]
             # filename = f"A_star{map_id}.waypoints"
             # export_waypoints(lat_lon_path, filename=filename)
