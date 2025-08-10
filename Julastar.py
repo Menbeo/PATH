@@ -123,7 +123,7 @@ if __name__ == "__main__":
     for map_id in range(1,5):
         print(f"Displaying Map {map_id}")
         grid = grid_map(map_id=map_id)
-        inflated_grid = compute_neighborhood_layers(grid, inflation_radius=3, meters_per_cell=1.0)
+        inflated_grid = compute_neighborhood_layers(grid, inflation_radius=0.1, meters_per_cell=0.5)
         path = astar(grid, default_start, default_goal, inflated_grid, inflation_penalty=5000)
         if path:
             print(f"Original path length: {len(path)}")
