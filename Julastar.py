@@ -68,7 +68,7 @@ def simplify_path(grid, path):
 def heuristic(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])  # Manhattan distance
 
-def astar(grid, start, goal, inflated_grid=None):
+def astar(grid, start, goal, inflated_grid=None, inflation_penalty=5000):
     rows, cols = grid.shape
 
     if inflated_grid is None:
@@ -103,7 +103,7 @@ def astar(grid, start, goal, inflated_grid=None):
             if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 0:
                 # Apply penalty if in inflated zone
                 if inflated_grid[nx, ny] == 1:
-                    layer_cost = 1_000_000
+                    layer_cost = inflation_penalty
                 else:
                     layer_cost = 1
 
@@ -124,7 +124,7 @@ if __name__ == "__main__":
         print(f"Displaying Map {map_id}")
         grid = grid_map(map_id=map_id)
         inflated_grid = compute_neighborhood_layers(grid, inflation_radius=3, meters_per_cell=1.0)
-        path = astar(grid, default_start, default_goal)
+        path = astar(grid, default_start, default_goal, inflated_grid, inflation_penalty=5000)
         if path:
             # print(f"Original path length: {len(path)}")
             simplified_path = simplify_path(grid, path)
