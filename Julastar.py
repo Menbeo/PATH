@@ -7,7 +7,7 @@ import heapq
 from convert_to_waypoints import export_waypoints
 from gridmap import convert_grid_to_lat_lon
 from gridmap import create_grid_map, grid_map, default_goal,default_start
-from new_apply import turn_constraint, bspline_smooth
+from new_apply import bspline_smooth
 
 def bresenham_line(x0, y0, x1, y1):
     """Generate points along a straight line from (x0, y0) to (x1, y1) using Bresenham's algorithm."""
@@ -95,12 +95,9 @@ def astar(grid, start, goal):
             neighbor = (nx, ny)
             if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 0:
                
-                if grid[nx][ny] == 1:  
-                    penalty = 1_000_000 
-                else:
-                    penalty = 10  
 
-                tentative_g = cost + penalty
+
+                tentative_g = cost + 1
                 if neighbor not in g_score or tentative_g < g_score[neighbor]:
                     g_score[neighbor] = tentative_g
                     f_score = tentative_g + heuristic(neighbor, goal)
@@ -119,13 +116,12 @@ if __name__ == "__main__":
         if path:
             # print(f"Original path length: {len(path)}")
             simplified_path = simplify_path(grid, path)
-            smooth_with_constraints = turn_constraint(simplified_path, grid)
+            # smooth_with_constraints = smooth_path(simplified_path,angle_threshold = 30)
             round_path = bspline_smooth(simplified_path, grid, num_points=100)
 
             # print(f"Simplified path length: {len(simplified_path)}")
            
-
-            create_grid_map(grid, [(int(x), int(y)) for (x, y) in round_path])
+            create_grid_map(grid,  round_path)
 
             # lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in simplified_path_corner]
             # filename = f"A_star{map_id}.waypoints"
