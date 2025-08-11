@@ -65,7 +65,7 @@ def compute_turn_metrics(path):
 def record(algorithm, map_id, run_id, path, start_time, memory_before):
     elapsed_time = time.time() - start_time
     mem_used = memory_usage_MB() - memory_before
-    path_len = len(path) if path else 0
+    path_len = len(path) 
 
     csv_writers["length"].writerow([algorithm, map_id, run_id, path_len])
     csv_writers["time"].writerow([algorithm, map_id, run_id, elapsed_time])
@@ -85,7 +85,7 @@ def record(algorithm, map_id, run_id, path, start_time, memory_before):
 # ========== Main Loop ==========
 for map_id in range(1,5):
     print(f"\n=== MAP {map_id} ===")
-    for run_id in range(1, 31):
+    for run_id in range(1, 21):
         print(f"[Map {map_id} - Run {run_id}]")
 
         # Create grid without showing it
@@ -119,16 +119,18 @@ for map_id in range(1,5):
         start_idx = len(samples) - 2
         goal_idx = len(samples) - 1
         graph = connect_nodes(samples, radius=50, grid=grid, inflation=inflation)
-
         memory_before = memory_usage_MB()
         start = time.time()
         try:
-            path_idx, _ = prm_dijkstra(graph, start_idx, goal_idx)
+            path_idx, node_expand = prm_dijkstra(graph, start_idx, goal_idx, samples, grid, inflation)
             path = [samples[i] for i in path_idx] if path_idx else []
-        except:
+            if not path:
+                print(f"[WARNING] PRM failed to find path in Map {map_id}, Run {run_id}")
+        except Exception as e:
+            print(f"[ERROR] PRM exception in Map {map_id}, Run {run_id}: {e}")
             path = []
+            node_expand = 0
         record("PRM", map_id, run_id, path, start, memory_before)
-
         # --- PSO ---
         memory_before = memory_usage_MB()
         start = time.time()
