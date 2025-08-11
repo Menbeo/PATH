@@ -11,6 +11,7 @@ from Julrrt import rrt, simplify_path as simplify_rrt
 from probalisitc_road_map import sample_points, connect_nodes, dijkstra as prm_dijkstra
 from PSO import particle_swarm_optimization
 
+
 # ========== Setup CSVs ==========
 csv_files = {
     "length": open("path_length.csv", "w", newline=''),
@@ -37,7 +38,6 @@ def compute_turn_metrics(path):
 
     total_angle = 0.0
     turn_count = 0
-    heading_changes = []
 
     for i in range(1, len(path) - 1):
         p1 = np.array(path[i - 1], dtype=float)
@@ -52,19 +52,14 @@ def compute_turn_metrics(path):
         if norm1 == 0 or norm2 == 0:
             continue
 
-        # Angle between v1 and v2
         cos_angle = np.clip(np.dot(v1, v2) / (norm1 * norm2), -1.0, 1.0)
-        angle = math.acos(cos_angle)  # radians
-        angle_deg = math.degrees(angle)
+        angle_deg = math.degrees(math.acos(cos_angle))
 
-        if angle_deg > 1e-3:  # small threshold to ignore straight lines
+        if angle_deg > 1e-3:
             total_angle += angle_deg
             turn_count += 1
-            heading_changes.append(angle_deg)
 
-    # Smoothness: smaller total_angle = smoother path
-    smoothness = 1 / (1 + total_angle)  # normalized: closer to 1 = smoother
-
+    smoothness = 1 / (1 + total_angle)
     return smoothness, total_angle, turn_count
 
 def record(algorithm, map_id, run_id, path, start_time, memory_before):
@@ -76,7 +71,6 @@ def record(algorithm, map_id, run_id, path, start_time, memory_before):
     csv_writers["time"].writerow([algorithm, map_id, run_id, elapsed_time])
     csv_writers["memory"].writerow([algorithm, map_id, run_id, mem_used])
 
-
     if path:
         smoothness, total_angle, turn_count = compute_turn_metrics(path)
     else:
@@ -87,13 +81,23 @@ def record(algorithm, map_id, run_id, path, start_time, memory_before):
     csv_writers["turn_count"].writerow([algorithm, map_id, run_id, turn_count])
 
 
-# ========== Main Loop ==========
-for map_id in range(1, 5):
-    print(f"=== MAP {map_id} ===")
-    for run_id in range(1, 101):
-        print(f"\n[Map {map_id} - Run {run_id}]")
+# ========== Map Configurations ==========
+# Define different sizes for 4 maps
+map_sizes = {
+    1: 50,
+    2: 60,
+    3: 70,
+    4: 80
+}
 
-        grid = grid_map(map_id)
+# ========== Main Loop ==========
+for map_id, size in map_sizes.items():
+    print(f"\n=== MAP {map_id} ({size}x{size}) ===")
+    for run_id in range(1, 101):
+        print(f"[Map {map_id} - Run {run_id}]")
+
+        # Create grid without showing it
+        grid = grid_map(map_id, size=size)  # ensure your grid_map supports size argument
         inflation = compute_neighborhood_layers(grid)
 
         # --- Dijkstra ---
@@ -127,7 +131,7 @@ for map_id in range(1, 5):
         memory_before = memory_usage_MB()
         start = time.time()
         try:
-            path_idx, node_expand = prm_dijkstra(graph, start_idx, goal_idx)
+            path_idx, _ = prm_dijkstra(graph, start_idx, goal_idx)
             path = [samples[i] for i in path_idx] if path_idx else []
         except:
             path = []
