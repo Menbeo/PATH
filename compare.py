@@ -93,7 +93,7 @@ map_sizes = {
 # ========== Main Loop ==========
 for map_id, size in map_sizes.items():
     print(f"\n=== MAP {map_id} ({size}x{size}) ===")
-    for run_id in range(1, 101):
+    for run_id in range(1, 81):
         print(f"[Map {map_id} - Run {run_id}]")
 
         # Create grid without showing it
