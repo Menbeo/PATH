@@ -227,7 +227,7 @@ def grid_map(map_id=1, size=50):
         plot_cluster(grid, (40,5), size = 60)
         plot_diamond(grid, (25,35), 6)
         plot_rhombus(grid, (25,5), 4, 5)
-        plot_rhombus(grid,(30,16), 9, 10)
+        plot_rhombus(grid,(30,16), 9, 5)
 
     return grid
 

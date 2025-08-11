@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
             print(f"Simplified path length: {len(round_path)}")
            
-            create_grid_map(grid,  round_path)
+            create_grid_map(grid,  path)
 
             lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in round_path]
             filename = f"A_star{map_id}.waypoints"
