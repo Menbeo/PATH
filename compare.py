@@ -85,7 +85,7 @@ def record(algorithm, map_id, run_id, path, start_time, memory_before):
 # ========== Main Loop ==========
 for map_id in range(1,5):
     print(f"\n=== MAP {map_id} ===")
-    for run_id in range(1, 21):
+    for run_id in range(1,21):
         print(f"[Map {map_id} - Run {run_id}]")
 
         # Create grid without showing it
