@@ -81,23 +81,15 @@ def record(algorithm, map_id, run_id, path, start_time, memory_before):
     csv_writers["turn_count"].writerow([algorithm, map_id, run_id, turn_count])
 
 
-# ========== Map Configurations ==========
-# Define different sizes for 4 maps
-map_sizes = {
-    1: 50,
-    2: 60,
-    3: 70,
-    4: 80
-}
 
 # ========== Main Loop ==========
-for map_id, size in map_sizes.items():
-    print(f"\n=== MAP {map_id} ({size}x{size}) ===")
-    for run_id in range(1, 81):
+for map_id in range(1,5):
+    print(f"\n=== MAP {map_id} ===")
+    for run_id in range(1, 31):
         print(f"[Map {map_id} - Run {run_id}]")
 
         # Create grid without showing it
-        grid = grid_map(map_id, size=size)  # ensure your grid_map supports size argument
+        grid = grid_map(map_id)  # ensure your grid_map supports size argument
         inflation = compute_neighborhood_layers(grid)
 
         # --- Dijkstra ---

@@ -70,7 +70,7 @@ def dijkstra(graph, start_idx,  goal_idx):
             layer = inflation[int(x), int(y)]
 
             if layer == 1:
-                layer_cost = 100
+                layer_cost = 10
             else:
                 layer_cost = 1
 
