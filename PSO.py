@@ -143,7 +143,7 @@ def particle_swarm_optimization(map_id):
     # export_waypoints(latlon_path, filename=f"PSO_map{map_id}.waypoints")
 
     # # Display on map without interactive plot
-    # create_grid_map(grid, smoothed_path)
+    create_grid_map(grid, smoothed_path)
     return smoothed_path
 
 # --- Main Execution ---

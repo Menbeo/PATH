@@ -93,9 +93,7 @@ def rrt(grid, inflation, start, goal, max_iter=3000, step_size=2.0, goal_sample_
 
 # ========== MAIN ==========
 if __name__ == "__main__":
-    for map_id in range(1,5):
-
-        grid = grid_map(map_id=map_id)
+        grid = grid_map(map_id=1)
         inflation = compute_neighborhood_layers(grid)
         path = rrt(grid, inflation, default_start, default_goal)
         smooth = bspline_smooth(path,grid, inflation)
@@ -104,7 +102,7 @@ if __name__ == "__main__":
             # simplify_pathhe = simplify_path(grid,path)
             create_grid_map(grid, smooth)
             lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in path]
-            filename = f"RRT{map_id}.waypoints"
+            filename = f"RRT{1}.waypoints"
             export_waypoints(lat_lon_path, filename=filename)
         else:
             print("No path found.")

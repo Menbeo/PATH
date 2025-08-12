@@ -28,7 +28,7 @@ def Dijkstra(grid, start, goal, inflation_layer=None):
             neighbor = (current[0] + dx, current[1] + dy)
             if 0 <= neighbor[0] < rows and 0 <= neighbor[1] < cols and grid[neighbor] == 0:
                 # Apply penalty for inflated zone
-                layer_cost = 1_000_000 if inflation_layer is not None and inflation_layer[neighbor] >= 1 else 1
+                layer_cost = 1000 if inflation_layer is not None and inflation_layer[neighbor] >= 1 else 1
                 new_cost = cost + layer_cost
 
                 if new_cost < distance.get(neighbor, float('inf')):

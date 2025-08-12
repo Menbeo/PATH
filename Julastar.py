@@ -121,7 +121,7 @@ def astar(grid, start, goal, inflated_grid=None, inflation_penalty=5000):
 # ========== MAIN ==========
 if __name__ == "__main__":
     for map_id in range(1,5):
-        print(f"Displaying Map {map_id}")
+        print(f"Displaying Map {1}")
         grid = grid_map(map_id=map_id)
         inflated_grid = compute_neighborhood_layers(grid)
         path = astar(grid, default_start, default_goal, inflated_grid, inflation_penalty=5000)
@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
             print(f"Simplified path length: {len(round_path)}")
            
-            create_grid_map(grid,  path)
+            create_grid_map(grid,  round_path)
 
             lat_lon_path = [convert_grid_to_lat_lon(x,y) for (x,y) in round_path]
             filename = f"A_star{map_id}.waypoints"
